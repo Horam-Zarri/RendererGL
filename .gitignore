@@ -1,0 +1,16 @@
+.DS_Store
+.cache/*
+.cache
+build*/*
+build*
+build./*
+build
+assimp/
+assets/
+imgui/
+imgui.ini
+glfw*
+glfw*/
+glm/
+glm
+compile_commands.json
