@@ -8,7 +8,7 @@
 namespace renderer
 {
 struct EngineState {
-    glm::vec3 LIGHT_POS = glm::vec3(1.0f);
+    glm::vec3 LIGHT_POS;
 
     glm::vec3 OBJECT_POS;
     glm::vec3 OBJECT_ROTATION;

@@ -30,8 +30,7 @@ static glm::mat4 projection_transform;
 static unsigned int offscr_fbo;
 static unsigned int offscr_tex;
 
-static unsigned int quadVAO;
-static unsigned int quadVBO;
+static VAO* quadVAO_ptr;
 
 static unsigned int postprocess_fbo;
 
@@ -123,13 +122,43 @@ void offscr_pass() {
     glBindFramebuffer(GL_FRAMEBUFFER, offscr_fbo);
     glEnable(GL_DEPTH_TEST);
 
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClearColor(g_Engine.CLEAR_COLOR.r,g_Engine.CLEAR_COLOR.g, g_Engine.CLEAR_COLOR.b, g_Engine.CLEAR_COLOR.a); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
     jtp_model->Draw(*offscr_shader);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+
+void setup_offscr_pass() {
+    glGenFramebuffers(1, &offscr_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, offscr_fbo);
+
+    glGenTextures(1, &offscr_tex);
+    glBindTexture(GL_TEXTURE_2D, offscr_tex);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, VIEWPORT_WIDTH, VIEWPORT_HEIGHT, 0, GL_RGB,
+                 GL_UNSIGNED_BYTE, NULL);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                           offscr_tex, 0);
+    unsigned int rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+                              GL_RENDERBUFFER, rbo);
+
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" <<
+            std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 
 void postprocess_pass() {
     pp_shader->use();
@@ -140,8 +169,28 @@ void postprocess_pass() {
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glBindVertexArray(quadVAO);
+    quadVAO_ptr->bind();
     glDrawArrays(GL_TRIANGLES, 0, 6);
+}
+
+void setup_postprocess_pass() {
+    glBindFramebuffer(GL_FRAMEBUFFER, offscr_fbo);
+
+    VBLayout layout;
+
+    layout.push<float>(2);
+    layout.push<float>(2);
+
+    static VBO quadVBO;
+    quadVBO.send_data(quadVertices, sizeof quadVertices);
+    static VAO quadVAO;
+    quadVAO.send_data(quadVBO, layout);
+
+    quadVAO_ptr = &quadVAO;
+
+    glBindVertexArray(0);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 void render() {
 
@@ -232,52 +281,19 @@ int init() {
     std::unique_ptr<Model> p(new Model("./assets/John_the_Baptist.obj"));
     jtp_model.swap(p);
 
-    std::cout << "SOU_NE::" << std::endl;
+    setup_offscr_pass();
+    setup_postprocess_pass();
 
-    glGenFramebuffers(1, &offscr_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, offscr_fbo);
-
-    glGenTextures(1, &offscr_tex);
-    glBindTexture(GL_TEXTURE_2D, offscr_tex);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, VIEWPORT_WIDTH, VIEWPORT_HEIGHT, 0, GL_RGB,
-                 GL_UNSIGNED_BYTE, NULL);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                           offscr_tex, 0);
-    unsigned int rbo;
-    glGenRenderbuffers(1, &rbo);
-    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
-    glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
-                              GL_RENDERBUFFER, rbo);
-
-    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" <<
-            std::endl;
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
-    glGenVertexArrays(1, &quadVAO);
-    glGenBuffers(1, &quadVBO);
-    glBindVertexArray(quadVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-
-    glBindVertexArray(0);
     return 0;
 }
 
 void update_state() {
     camera::g_Camera.update_camera(camera::CAMERA_STATE);
+
+
+    g_Engine.CLEAR_COLOR = ENGINE_STATE.CLEAR_COLOR;
+
+    ENGINE_STATE = g_Engine;
 }
 void terminate() {}
 }

@@ -1,10 +1,12 @@
 #include "gui.hpp"
 #include "imgui.h"
 #include "renderer.hpp"
+#include <iostream>
 
 float x = 50;
 
 void settings_panel() {
+
 
 
     ImGuiViewport* window_full = ImGui::GetMainViewport();
@@ -27,16 +29,18 @@ void settings_panel() {
     }
 
 
-    using namespace renderer;
+    using renderer::ENGINE_STATE;
+    using renderer::camera::CAMERA_STATE;
+
 
     if (ImGui::TreeNode("Model")) {
 
         ImGui::SeparatorText("Position:");
 
         ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.2);
-        ImGui::DragFloat("X", &x); ImGui::SameLine();
-        ImGui::DragFloat("Y", &x); ImGui::SameLine();
-        ImGui::DragFloat("Z", &x);
+        ImGui::DragFloat("X", &ENGINE_STATE.OBJECT_POS.x); ImGui::SameLine();
+        ImGui::DragFloat("Y", &ENGINE_STATE.OBJECT_POS.y); ImGui::SameLine();
+        ImGui::DragFloat("Z", &ENGINE_STATE.OBJECT_POS.z);
 
         ImGui::PopItemWidth();
 
@@ -49,19 +53,52 @@ void settings_panel() {
 
         ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.2);
 
-        ImGui::DragFloat("X", &camera::CAMERA_STATE.Position.x); ImGui::SameLine();
-        ImGui::DragFloat("Y", &camera::CAMERA_STATE.Position.y); ImGui::SameLine();
-        ImGui::DragFloat("Z", &camera::CAMERA_STATE.Position.z);
+        ImGui::DragFloat("X", &CAMERA_STATE.Position.x); ImGui::SameLine();
+        ImGui::DragFloat("Y", &CAMERA_STATE.Position.y); ImGui::SameLine();
+        ImGui::DragFloat("Z", &CAMERA_STATE.Position.z);
 
         ImGui::Spacing();
 
         ImGui::SeparatorText("Rotation: ");
 
-        ImGui::DragFloat("Yaw", &camera::CAMERA_STATE.Yaw); ImGui::SameLine();
-        ImGui::DragFloat("Pitch", &camera::CAMERA_STATE.Pitch); ImGui::SameLine();
+        ImGui::DragFloat("Yaw", &CAMERA_STATE.Yaw); ImGui::SameLine();
+        ImGui::DragFloat("Pitch", &CAMERA_STATE.Pitch); ImGui::SameLine();
 
 
         ImGui::PopItemWidth();
+
+        ImGui::TreePop();
+    }
+
+
+    if (ImGui::TreeNode("Rendering")) {
+
+        ImGui::SeparatorText("General");
+
+        ImGui::ColorEdit4("Clear color", &ENGINE_STATE.CLEAR_COLOR.x);
+
+        ImGui::SeparatorText("Postprocessing");
+
+        static int post_state = 0;
+
+        ImGui::RadioButton("Sharpness", &post_state, 0); ImGui::SameLine();
+        ImGui::RadioButton("Blur", &post_state, 1); ImGui::SameLine();
+        ImGui::RadioButton("Grayscale", &post_state, 2);
+
+        // TODO: Implement actual postprocessing settings
+        switch (post_state) {
+            case 0:
+                ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.5f);
+                ImGui::SliderFloat("Sharpness amount", &x, 0.0f, 1.0f);
+                ImGui::PopItemWidth();
+            break;
+            case 2:
+                ImGui::SliderFloat3("Weights", &x, 0.0f, 1.0f);
+            break;
+            default:
+            break;
+        }
+
 
         ImGui::TreePop();
     }
