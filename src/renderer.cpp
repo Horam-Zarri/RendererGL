@@ -23,7 +23,6 @@ Camera camera::CAMERA_STATE(glm::vec3(0.0f, 0.0f, 3.0f));
 EngineState g_Engine;
 EngineState ENGINE_STATE;
 
-static glm::mat4 model_transform(1.0f);
 static glm::mat4 view_transform;
 static glm::mat4 projection_transform;
 
@@ -101,7 +100,8 @@ VAO* lightCubeVAO_ptr;
 
 void send_offscr_uniforms() {
     glm::mat4 md = glm::mat4(1.0f);
-    md = glm::scale(model_transform, glm::vec3(0.1));
+    md = glm::translate(md, g_Engine.OBJECT_POS);
+    md = glm::scale(md, glm::vec3(0.1));
     md = glm::rotate(md, glm::radians(-90.0f), glm::vec3(1.0, 0.0, 0.0));
     offscr_shader->setMat4("model", md);
     offscr_shader->setMat4("view", camera::g_Camera.GetViewMatrix());
@@ -163,19 +163,21 @@ void setup_offscr_pass() {
 
 void postprocess_pass() {
     pp_shader->use();
-    send_postprocess_uniforms();
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    send_postprocess_uniforms();
     glDisable(GL_DEPTH_TEST);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
     glClear(GL_COLOR_BUFFER_BIT);
 
     quadVAO_ptr->bind();
     glDrawArrays(GL_TRIANGLES, 0, 6);
+    quadVAO_ptr->unbind();
 }
 
 void setup_postprocess_pass() {
-    glBindFramebuffer(GL_FRAMEBUFFER, offscr_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     VBLayout layout;
 
@@ -188,11 +190,8 @@ void setup_postprocess_pass() {
     quadVAO.send_data(quadVBO, layout);
 
     quadVAO_ptr = &quadVAO;
-
-    glBindVertexArray(0);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+
 void render() {
 
     // render
@@ -292,6 +291,9 @@ void update_state() {
     camera::g_Camera.update_camera(camera::CAMERA_STATE);
 
     g_Engine.CLEAR_COLOR = ENGINE_STATE.CLEAR_COLOR;
+
+    if (g_Engine.OBJECT_POS != ENGINE_STATE.OBJECT_POS)
+        g_Engine.OBJECT_POS = ENGINE_STATE.OBJECT_POS;
 
     ENGINE_STATE = g_Engine;
 }
