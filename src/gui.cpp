@@ -67,6 +67,7 @@ void settings_panel() {
 
         ImGui::PopItemWidth();
 
+        ImGui::Spacing();
         ImGui::TreePop();
     }
 

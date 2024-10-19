@@ -100,7 +100,8 @@ float quadVertices[] = { // vertex attributes for a quad that fills the entire s
 VAO* lightCubeVAO_ptr;
 
 void send_offscr_uniforms() {
-    glm::mat4 md = glm::scale(model_transform, glm::vec3(0.2));
+    glm::mat4 md = glm::mat4(1.0f);
+    md = glm::scale(model_transform, glm::vec3(0.1));
     md = glm::rotate(md, glm::radians(-90.0f), glm::vec3(1.0, 0.0, 0.0));
     offscr_shader->setMat4("model", md);
     offscr_shader->setMat4("view", camera::g_Camera.GetViewMatrix());
@@ -290,12 +291,9 @@ int init() {
 void update_state() {
     camera::g_Camera.update_camera(camera::CAMERA_STATE);
 
-
     g_Engine.CLEAR_COLOR = ENGINE_STATE.CLEAR_COLOR;
 
     ENGINE_STATE = g_Engine;
 }
 void terminate() {}
 }
-
-

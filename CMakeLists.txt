@@ -19,7 +19,7 @@ if(WIN32)
 
     set(ASSIMP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assimp)
 elseif(APPLE)
-    set(GLFW_DIR ${CMAKE_CURRENT_SOURCE_DIR}/glfw-3.4.bin.MACOS)
+    set(GLFW_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/glfw-3.4.bin.MACOS)
     set(GLFW_LIBS ${GLFW_DIR}/lib-universal/libglfw.3.dylib)
 
     set(ASSIMP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assimp)
