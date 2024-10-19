@@ -78,6 +78,23 @@ void settings_panel() {
 
         ImGui::ColorEdit4("Clear color", &ENGINE_STATE.CLEAR_COLOR.x);
 
+        ImGui::SeparatorText("Lighting");
+
+        ImGui::Text("Position:");
+
+        ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.2f);
+
+        ImGui::DragFloat("X", &ENGINE_STATE.LIGHT_POS.x); ImGui::SameLine();
+        ImGui::DragFloat("Y", &ENGINE_STATE.LIGHT_POS.y); ImGui::SameLine();
+        ImGui::DragFloat("Z", &ENGINE_STATE.LIGHT_POS.z);
+
+        ImGui::PopItemWidth();
+
+        ImGui::DragFloat3("Ambient", &ENGINE_STATE.LIGHT_AMBIENT.x, .05f, 0.0f, 1.0f);
+        ImGui::DragFloat3("Diffuse", &ENGINE_STATE.LIGHT_DIFFUSE.x, .05f, 0.0f, 1.0f);
+        ImGui::DragFloat3("Specular", &ENGINE_STATE.LIGHT_SPECULAR.x, .05f, 0.0f, 1.0f);
+
+
         ImGui::SeparatorText("Postprocessing");
 
         static int post_state = 0;

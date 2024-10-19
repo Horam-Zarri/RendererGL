@@ -9,6 +9,9 @@ namespace renderer
 {
 struct EngineState {
     glm::vec3 LIGHT_POS;
+    glm::vec3 LIGHT_AMBIENT;
+    glm::vec3 LIGHT_DIFFUSE;
+    glm::vec3 LIGHT_SPECULAR;
 
     glm::vec3 OBJECT_POS;
     glm::vec3 OBJECT_ROTATION;
@@ -24,7 +27,10 @@ struct EngineState {
     uint32_t RENDER_HEIGHT;
 
     EngineState() {
-        LIGHT_POS = glm::vec3(3.0f, 2.0f, 3.0f);
+        LIGHT_POS = glm::vec3(4.0f, 2.0f, 3.0f);
+        LIGHT_AMBIENT = glm::vec3(0.1f);
+        LIGHT_DIFFUSE = glm::vec3(0.5f);
+        LIGHT_SPECULAR = glm::vec3(1.0f);
 
         OBJECT_POS = glm::vec3(0.0f);
         OBJECT_ROTATION = glm::vec3(0.0f);

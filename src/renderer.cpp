@@ -39,7 +39,6 @@ static std::unique_ptr<Shader> shaderLC;
 
 static std::unique_ptr<Model> jtp_model;
 
-const glm::vec3 lightDir = glm::vec3(4.0f, 2.0f, 2.0f);
 
 float vertices[] = {
         -0.5f, -0.5f, -0.5f,
@@ -108,6 +107,11 @@ void send_offscr_uniforms() {
     offscr_shader->setMat4("projection", glm::perspective(glm::radians(camera::g_Camera.Zoom),
                                                           ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE));
     offscr_shader->setVec3("viewPos", camera::g_Camera.Position);
+
+    offscr_shader->setVec3("light.direction", g_Engine.LIGHT_POS);
+    offscr_shader->setVec3("light.ambient", g_Engine.LIGHT_AMBIENT);
+    offscr_shader->setVec3("light.diffuse", g_Engine.LIGHT_DIFFUSE);
+    offscr_shader->setVec3("light.specular", g_Engine.LIGHT_SPECULAR);
 }
 
 void send_postprocess_uniforms() {
@@ -220,11 +224,12 @@ void render() {
     shaderLC->use();
 
     model = glm::mat4(1.0f);
-    model = glm::translate(model, lightDir);
+    model = glm::translate(model, g_Engine.LIGHT_POS);
     model = glm::scale(model, glm::vec3(0.5f));
     shaderLC->setMat4("model", model);
     shaderLC->setMat4("view", view);
     shaderLC->setMat4("projection", projection);
+
 
     lightCubeVAO_ptr->bind();
     glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -250,10 +255,10 @@ int init() {
     shader_l.setInt("material.texture_diffuse1", 0);
     shader_l.setInt("material.texture_specular1", 1);
 
-    shader_l.setVec3("light.direction", lightDir);
-    shader_l.setVec3("light.ambient", glm::vec3(0.2f, 0.2f, 0.2f));
-    shader_l.setVec3("light.diffuse", glm::vec3(0.6f, 0.6f, 0.6f));
-    shader_l.setVec3("light.specular", glm::vec3(1.0f, 1.0f, 1.0f));
+    shader_l.setVec3("light.direction", g_Engine.LIGHT_POS);
+    shader_l.setVec3("light.ambient", g_Engine.LIGHT_AMBIENT);
+    shader_l.setVec3("light.diffuse", g_Engine.LIGHT_DIFFUSE);
+    shader_l.setVec3("light.specular", g_Engine.LIGHT_SPECULAR);
     shader_l.setFloat("material.shininess", 32);
 
 
@@ -292,8 +297,19 @@ void update_state() {
 
     g_Engine.CLEAR_COLOR = ENGINE_STATE.CLEAR_COLOR;
 
+    // model
     if (g_Engine.OBJECT_POS != ENGINE_STATE.OBJECT_POS)
         g_Engine.OBJECT_POS = ENGINE_STATE.OBJECT_POS;
+
+    // lighting
+    if (g_Engine.LIGHT_POS != ENGINE_STATE.LIGHT_POS)
+        g_Engine.LIGHT_POS = ENGINE_STATE.LIGHT_POS;
+    if (g_Engine.LIGHT_AMBIENT != ENGINE_STATE.LIGHT_AMBIENT)
+        g_Engine.LIGHT_AMBIENT = ENGINE_STATE.LIGHT_AMBIENT;
+    if (g_Engine.LIGHT_DIFFUSE != ENGINE_STATE.LIGHT_SPECULAR)
+        g_Engine.LIGHT_DIFFUSE = ENGINE_STATE.LIGHT_DIFFUSE;
+    if (g_Engine.LIGHT_SPECULAR != ENGINE_STATE.LIGHT_SPECULAR)
+        g_Engine.LIGHT_SPECULAR = ENGINE_STATE.LIGHT_SPECULAR;
 
     ENGINE_STATE = g_Engine;
 }
