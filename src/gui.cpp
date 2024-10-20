@@ -99,19 +99,36 @@ void settings_panel() {
 
         static int post_state = 0;
 
-        ImGui::RadioButton("Sharpness", &post_state, 0); ImGui::SameLine();
-        ImGui::RadioButton("Blur", &post_state, 1); ImGui::SameLine();
-        ImGui::RadioButton("Grayscale", &post_state, 2);
+        ImGui::RadioButton("None", &post_state, 0); ImGui::SameLine();
+        ImGui::RadioButton("Sharpness", &post_state, 1); ImGui::SameLine();
+        ImGui::RadioButton("Blur", &post_state, 2); ImGui::SameLine();
+        ImGui::RadioButton("Grayscale", &post_state, 3);
 
-        // TODO: Implement actual postprocessing settings
+        // TODO: This is pretty ugly and there could be edge cases
         switch (post_state) {
             case 0:
+                ENGINE_STATE.SHARPNESS_ENBL = false;
+                ENGINE_STATE.BLUR_ENBL = false;
+                ENGINE_STATE.GRAYSCALE_ENBL = false;
+            break;
+            case 1:
+                ENGINE_STATE.SHARPNESS_ENBL = true;
+                ENGINE_STATE.BLUR_ENBL = false;
+                ENGINE_STATE.GRAYSCALE_ENBL = false;
+
                 ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.5f);
-                ImGui::SliderFloat("Sharpness amount", &x, 0.0f, 1.0f);
+                ImGui::SliderFloat("Sharpness amount", &ENGINE_STATE.SHARPNESS_AMOUNT, 0.0f, 1.0f);
                 ImGui::PopItemWidth();
             break;
             case 2:
-                ImGui::SliderFloat3("Weights", &x, 0.0f, 1.0f);
+                ENGINE_STATE.BLUR_ENBL = true;
+                ENGINE_STATE.SHARPNESS_ENBL = false;
+                ENGINE_STATE.GRAYSCALE_ENBL = false;
+            break;
+            case 3:
+                ENGINE_STATE.GRAYSCALE_ENBL = true;
+                ENGINE_STATE.SHARPNESS_ENBL = false;
+                ENGINE_STATE.BLUR_ENBL = false;
             break;
             default:
             break;

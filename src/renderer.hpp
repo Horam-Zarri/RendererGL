@@ -2,7 +2,6 @@
 #define RENDERER_H
 
 #include "camera.hpp"
-#include "engine.hpp"
 #include <cstdint>
 
 namespace renderer
@@ -16,6 +15,12 @@ struct EngineState {
     glm::vec3 OBJECT_POS;
     glm::vec3 OBJECT_ROTATION;
     float OBJ_SCALE;
+
+    unsigned int SHARPNESS_ENBL;
+    float SHARPNESS_AMOUNT;
+
+    unsigned int BLUR_ENBL;
+    unsigned int GRAYSCALE_ENBL;
 
     bool CLEAR_DEPTH_BUF, CLEAR_COLOR_BUF, CLEAR_STENCIL_BUF;
 
@@ -35,6 +40,12 @@ struct EngineState {
         OBJECT_POS = glm::vec3(0.0f);
         OBJECT_ROTATION = glm::vec3(0.0f);
         OBJ_SCALE = 1.0;
+
+        SHARPNESS_ENBL = false;
+        SHARPNESS_AMOUNT = 1.0f;
+
+        BLUR_ENBL = false;
+        GRAYSCALE_ENBL = false;
 
         CLEAR_COLOR_BUF = CLEAR_DEPTH_BUF =
             CLEAR_STENCIL_BUF = true;

@@ -117,9 +117,16 @@ void send_offscr_uniforms() {
 void send_postprocess_uniforms() {
     pp_shader->setInt("screenTexture", 0);
 
+    pp_shader->setBool("sharpen", g_Engine.SHARPNESS_ENBL);
+    pp_shader->setFloat("sharpness", g_Engine.SHARPNESS_AMOUNT);
+
+    pp_shader->setBool("blur", g_Engine.BLUR_ENBL);
+    pp_shader->setBool("grayscale", g_Engine.GRAYSCALE_ENBL);
+
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, offscr_tex);
 }
+
 void offscr_pass() {
     offscr_shader->use();
     send_offscr_uniforms();
@@ -306,10 +313,20 @@ void update_state() {
         g_Engine.LIGHT_POS = ENGINE_STATE.LIGHT_POS;
     if (g_Engine.LIGHT_AMBIENT != ENGINE_STATE.LIGHT_AMBIENT)
         g_Engine.LIGHT_AMBIENT = ENGINE_STATE.LIGHT_AMBIENT;
-    if (g_Engine.LIGHT_DIFFUSE != ENGINE_STATE.LIGHT_SPECULAR)
+    if (g_Engine.LIGHT_DIFFUSE != ENGINE_STATE.LIGHT_DIFFUSE)
         g_Engine.LIGHT_DIFFUSE = ENGINE_STATE.LIGHT_DIFFUSE;
     if (g_Engine.LIGHT_SPECULAR != ENGINE_STATE.LIGHT_SPECULAR)
         g_Engine.LIGHT_SPECULAR = ENGINE_STATE.LIGHT_SPECULAR;
+
+    // postprocess
+    if (g_Engine.SHARPNESS_ENBL != ENGINE_STATE.SHARPNESS_ENBL)
+        g_Engine.SHARPNESS_ENBL = ENGINE_STATE.SHARPNESS_ENBL;
+    if (g_Engine.SHARPNESS_AMOUNT != ENGINE_STATE.SHARPNESS_AMOUNT)
+        g_Engine.SHARPNESS_AMOUNT = ENGINE_STATE.SHARPNESS_AMOUNT;
+    if (g_Engine.BLUR_ENBL != ENGINE_STATE.BLUR_ENBL)
+        g_Engine.BLUR_ENBL = ENGINE_STATE.BLUR_ENBL ;
+    if (g_Engine.GRAYSCALE_ENBL != ENGINE_STATE.GRAYSCALE_ENBL)
+        g_Engine.GRAYSCALE_ENBL = ENGINE_STATE.GRAYSCALE_ENBL;
 
     ENGINE_STATE = g_Engine;
 }
