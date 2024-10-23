@@ -5,6 +5,5 @@ build*/*
 build*
 build./*
 build
-assimp/
 assets/
 compile_commands.json
