@@ -28,6 +28,7 @@ endif()
 
 set(GLAD_DIR ${EXTERNAL_DIR}/glad)
 set(GLM_DIR ${EXTERNAL_DIR}/glm)
+set(STB_DIR ${EXTERNAL_DIR}/stb)
 set(IMGUI_DIR ${EXTERNAL_DIR}/imgui)
 
 include_directories(src)
@@ -35,6 +36,7 @@ include_directories(${GLAD_DIR}/include)
 include_directories(${GLFW_DIR}/include)
 include_directories(${ASSIMP_DIR}/include)
 include_directories(${GLM_DIR})
+include_directories(${STB_DIR})
 include_directories(${IMGUI_DIR} ${IMGUI_DIR}/backends)
 
 
