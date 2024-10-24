@@ -1,16 +1,24 @@
 #include "texture.hpp"
+#include <cstdlib>
 
-Texture::Texture() {
+
+Texture::Texture(): m_Dirty{true} {}
+
+void Texture::init() {
     glGenTextures(1, &m_TextureID);
+    glBindTexture(GL_TEXTURE_2D, m_TextureID);
+    m_Dirty = false;
 }
 
-Texture::~Texture() {
-    // TODO: deallocate texture
-    //glDeleteTextures(1, &m_TextureID);
-}
 
 void Texture::load(const std::string& path) {
 
+    if (m_Dirty) {
+        std::cerr << "Texture loaded before initialization!" << std::endl;
+        std::exit(2);
+    }
+
+    m_Path = path;
     m_TexConfig.level = 0;
     m_TexConfig.wrap_s = GL_REPEAT;
     m_TexConfig.wrap_t = GL_REPEAT;
@@ -50,6 +58,11 @@ void Texture::load(const std::string& path) {
 }
 
 void Texture::load(const std::string& path, TextureConfig texture_conf) {
+    if (m_Dirty) {
+        std::cerr << "Texture loaded before initialization!" << std::endl;
+    }
+    m_Path = path;
+
     int nrComponents;
     unsigned char *data = stbi_load(path.c_str(), (int*)&m_Width, (int*)&m_Height, &nrComponents, 0);
     if (data)

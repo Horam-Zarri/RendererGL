@@ -8,6 +8,9 @@
 #include <string>
 #include <stb_image.h>
 
+enum class TextureType {
+    DIFFUSE, SPECULAR
+};
 
 struct TextureConfig {
     GLint level;
@@ -25,12 +28,17 @@ class Texture {
 private:
     TextureConfig m_TexConfig;
     unsigned int m_TextureID;
-    std::string m_Path;
     unsigned char* m_Buffer;
     unsigned int m_Width, m_Height;
+
+    bool m_Dirty;
 public:
+    std::string m_Path;
+    TextureType m_Type;
+
     Texture();
-    ~Texture();
+
+    void init();
     void load(const std::string& path);
     void load(const std::string& path, TextureConfig texture_conf);
     void bind(unsigned int slot);

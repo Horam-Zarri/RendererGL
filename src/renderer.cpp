@@ -5,12 +5,12 @@
 #include "core/VBO.hpp"
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/trigonometric.hpp>
-#include "mesh.hpp"
 #include "shader.hpp"
 #include <glm/vec3.hpp>
 #include <memory>
 #include <stb_image.h>
 #include "model.hpp"
+#include "core/texture.hpp"
 #include "window.hpp"
 
 namespace renderer {
@@ -100,8 +100,8 @@ VAO* lightCubeVAO_ptr;
 void send_offscr_uniforms() {
     glm::mat4 md = glm::mat4(1.0f);
     md = glm::translate(md, g_Engine.OBJECT_POS);
-    md = glm::scale(md, glm::vec3(0.1));
-    md = glm::rotate(md, glm::radians(-90.0f), glm::vec3(1.0, 0.0, 0.0));
+    md = glm::scale(md, glm::vec3(1.0));
+    md = glm::rotate(md, glm::radians(0.0f), glm::vec3(1.0, 0.0, 0.0));
     offscr_shader->setMat4("model", md);
     offscr_shader->setMat4("view", camera::g_Camera.GetViewMatrix());
     offscr_shader->setMat4("projection", glm::perspective(glm::radians(camera::g_Camera.Zoom),
@@ -251,7 +251,7 @@ int init() {
     glDepthFunc(GL_LESS);
     glEnable(GL_STENCIL_TEST);
 
-    Shader shader_l("./shaders/default_obj_vs.glsl", "./shaders/john_the_baptist_fs.glsl");
+    Shader shader_l("./shaders/default_obj_vs.glsl", "./shaders/default_obj_fs.glsl");
     Shader shaderLC_l("./shaders/light_cube_vs.glsl", "./shaders/light_cube_fs.glsl");
     Shader shader_pp("./shaders/screen_PP_vs.glsl", "./shaders/screen_PP_fs.glsl");
 
@@ -290,7 +290,7 @@ int init() {
     shaderLC = std::make_unique<Shader>(shaderLC_l);
     pp_shader = std::make_unique<Shader>(shader_pp);
 
-    std::unique_ptr<Model> p(new Model("./assets/John_the_Baptist.obj"));
+    std::unique_ptr<Model> p(new Model("./assets/backpack.obj"));
     jtp_model.swap(p);
 
     setup_offscr_pass();

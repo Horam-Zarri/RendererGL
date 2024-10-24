@@ -9,6 +9,7 @@
 
 #include "core/EBO.hpp"
 #include "core/VAO.hpp"
+#include "core/texture.hpp"
 #include "shader.hpp"
 
 #include <string>
@@ -21,13 +22,6 @@ struct Vertex {
     glm::vec3 Normal;
     glm::vec2 TexCoords;
 };
-
-struct Texture {
-    unsigned int id;
-    string type;
-    string path;
-};
-
 
 class Mesh {
 private:
@@ -85,15 +79,22 @@ public:
             glActiveTexture(GL_TEXTURE0 + i);
 
             string number;
-            string name = textures[i].type;
-            if(name == "texture_diffuse")
+            string name;
+
+            auto type = textures[i].m_Type;
+            if(type == TextureType::DIFFUSE) {
+                name = "texture_diffuse";
                 number = std::to_string(diffuseNr++);
-            else if(name == "texture_specular")
+            }
+            else if (type == TextureType::SPECULAR) {
+                name = "texture_specular";
                 number = std::to_string(specularNr++);
+            }
+            else
+                std::cerr << "MESH::UNKNOWN_TEXTURETYPE" << std::endl;
 
             shader.setFloat(("material." + name + number).c_str(), i);
-            //std::cout << "SHADER::SET::" << "material." << name << number << std::endl;
-            glBindTexture(GL_TEXTURE_2D, textures[i].id);
+            textures[i].bind(i);
         }
 
         m_VAO.bind();

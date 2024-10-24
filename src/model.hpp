@@ -11,10 +11,12 @@
 
 #include <mesh.hpp>
 #include <shader.hpp>
+#include <core/texture.hpp>
 
 #include <string>
 #include <iostream>
 #include <vector>
+#include <filesystem>
 
 
 unsigned int TextureFromFile(const char* path, const string& directory, bool gamma);
@@ -118,18 +120,20 @@ private:
         {
             aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
             vector<Texture> diffuseMaps = loadMaterialTextures(material,
-                                                               aiTextureType_DIFFUSE, "texture_diffuse");
+                                                               aiTextureType_DIFFUSE);
+            std::cout << "AFTER_DIFFUSE_LOAD" << std::endl;
             textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
             vector<Texture> specularMaps = loadMaterialTextures(material,
-                                                                aiTextureType_SPECULAR, "texture_specular");
+                                                                aiTextureType_SPECULAR);
             textures.insert(textures.end(), specularMaps.begin(),
                             specularMaps.end());
         }
 
+            std::cout << "BEFORE MESHSHSHSIHSSH" << std::endl;
         return std::unique_ptr<Mesh>(new Mesh(vertices, indices, textures));
     }
 
-    std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, string typeName)
+    std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type)
     {
         std::vector<Texture> textures;
         std::cout << "ASSIMP::TEXTURE_COUNT::" << type << "::"  << mat->GetTextureCount(type) << std::endl;
@@ -140,8 +144,10 @@ private:
 
             std::cout << "ASSIMP::TEXTURE_FILE::" << str.C_Str() << std::endl;
             for (unsigned int j = 0; j < textures_loaded.size(); j++) {
-                if (std::strcmp(textures_loaded[j].path.data(), str.C_Str()) == 0)
+                std::string fname = std::filesystem::path(textures_loaded[j].m_Path).filename().string();
+                if (std::strcmp(fname.data(), str.C_Str()) == 0)
                 {
+                    std::cout << "ASSIMP::TEXTURE_ALREADY_EXISTS" << std::endl;
                     textures.push_back(textures_loaded[j]);
                     skip = true;
                     break;
@@ -150,13 +156,20 @@ private:
 
             if (!skip) {
                 Texture texture;
-                texture.id = TextureFromFile(str.C_Str(), directory, false);
-                texture.type = typeName;
-                texture.path = str.C_Str();
+                texture.init();
+                string fpath = string(str.C_Str());
+                fpath = directory + '/' + fpath;
+                texture.load(fpath);
+                if (type == aiTextureType_DIFFUSE)
+                    texture.m_Type = TextureType::DIFFUSE;
+                else
+                    texture.m_Type = TextureType::SPECULAR;
                 textures.push_back(texture);
                 textures_loaded.push_back(texture);
             }
         }
+
+        std::cout << "BEFORE_RETURN" << std::endl;
         return textures;
     }
 };
