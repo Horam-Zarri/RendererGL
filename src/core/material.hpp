@@ -10,7 +10,7 @@
 class Material {
 public:
     Material() {}
-    virtual void send_uniforms(Shader& shader);
+    virtual void send_uniforms(Shader& shader) = 0;
 };
 
 

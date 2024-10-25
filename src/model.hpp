@@ -12,6 +12,7 @@
 #include <mesh.hpp>
 #include <shader.hpp>
 #include <core/texture.hpp>
+#include <core/material.hpp>
 
 #include <string>
 #include <iostream>
@@ -121,7 +122,6 @@ private:
             aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
             vector<Texture> diffuseMaps = loadMaterialTextures(material,
                                                                aiTextureType_DIFFUSE);
-            std::cout << "AFTER_DIFFUSE_LOAD" << std::endl;
             textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
             vector<Texture> specularMaps = loadMaterialTextures(material,
                                                                 aiTextureType_SPECULAR);
@@ -129,8 +129,16 @@ private:
                             specularMaps.end());
         }
 
-            std::cout << "BEFORE MESHSHSHSIHSSH" << std::endl;
-        return std::unique_ptr<Mesh>(new Mesh(vertices, indices, textures));
+        if (textures.empty()) {
+            constexpr glm::vec3 DEFAULT_OBJ_COLOR(1.0f);
+            return std::unique_ptr<Mesh>(
+                new Mesh(vertices, indices, std::unique_ptr<PhongMaterial>
+                         (new PhongMaterial(DEFAULT_OBJ_COLOR))));
+        } else {
+            return std::unique_ptr<Mesh>(
+                new Mesh(vertices, indices, std::unique_ptr<PhongMaterial>
+                         (new PhongMaterial(textures[0], textures[1]))));
+        }
     }
 
     std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type)

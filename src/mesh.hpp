@@ -9,6 +9,7 @@
 
 #include "core/EBO.hpp"
 #include "core/VAO.hpp"
+#include "core/material.hpp"
 #include "core/texture.hpp"
 #include "shader.hpp"
 
@@ -30,14 +31,13 @@ private:
     EBO m_EBO;
 
     unsigned int m_VertexCount;
+    std::unique_ptr<Material> m_Material;
 
 public:
-    vector<Texture>      textures;
-
 
     // constructor
-    Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures)
-        : m_VertexCount(vertices.size())
+    Mesh(vector<Vertex> vertices, vector<unsigned int> indices, std::unique_ptr<Material> mat)
+        : m_VertexCount(vertices.size()), m_Material(std::move(mat))
     {
         VBLayout layout;
         layout.push<float>(3);
@@ -51,12 +51,10 @@ public:
         m_EBO.send_data(indices.data(), indices.size());
         m_EBO.bind();
         m_VAO.send_data(m_VBO, layout);
-
-        this->textures = textures;
     }
 
-    Mesh(vector<Vertex> vertices, vector<Texture> textures)
-        : m_VertexCount(vertices.size())
+    Mesh(vector<Vertex> vertices, std::unique_ptr<Material> mat)
+        : m_VertexCount(vertices.size()), m_Material(std::move(mat))
     {
         VBLayout layout;
         layout.push<float>(3);
@@ -66,39 +64,14 @@ public:
         m_VBO.send_data(vertices.data(), sizeof(Vertex) * vertices.size());
         m_VAO.send_data(m_VBO, layout);
 
-        this->textures = textures;
     }
 
     void Draw(Shader &shader)
     {
-        unsigned int diffuseNr  = 1;
-        unsigned int specularNr = 1;
-
-        for(unsigned int i = 0; i < textures.size(); i++)
-        {
-            glActiveTexture(GL_TEXTURE0 + i);
-
-            string number;
-            string name;
-
-            auto type = textures[i].m_Type;
-            if(type == TextureType::DIFFUSE) {
-                name = "texture_diffuse";
-                number = std::to_string(diffuseNr++);
-            }
-            else if (type == TextureType::SPECULAR) {
-                name = "texture_specular";
-                number = std::to_string(specularNr++);
-            }
-            else
-                std::cerr << "MESH::UNKNOWN_TEXTURETYPE" << std::endl;
-
-            shader.setFloat(("material." + name + number).c_str(), i);
-            textures[i].bind(i);
-        }
-
         m_VAO.bind();
         m_EBO.bind();
+
+        m_Material->send_uniforms(shader);
 
         // maybe find a better way to handle this
         if (m_EBO.count() == 0)
