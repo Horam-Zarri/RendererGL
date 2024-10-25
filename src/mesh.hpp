@@ -71,7 +71,9 @@ public:
         m_VAO.bind();
         m_EBO.bind();
 
-        m_Material->send_uniforms(shader);
+        // interface shall allow for no material custom cases
+        if (m_Material)
+            m_Material->send_uniforms(shader);
 
         // maybe find a better way to handle this
         if (m_EBO.count() == 0)

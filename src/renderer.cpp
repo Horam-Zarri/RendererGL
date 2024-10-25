@@ -11,6 +11,7 @@
 #include <stb_image.h>
 #include "model.hpp"
 #include "core/texture.hpp"
+#include "skybox.hpp"
 #include "window.hpp"
 
 namespace renderer {
@@ -35,9 +36,11 @@ static unsigned int postprocess_fbo;
 
 static std::unique_ptr<Shader> offscr_shader;
 static std::unique_ptr<Shader> pp_shader;
-static std::unique_ptr<Shader> shaderLC;
+static std::unique_ptr<Shader> light_cube_shader;
+static std::unique_ptr<Shader> skybox_shader;
 
 static std::unique_ptr<Model> jtp_model;
+static std::unique_ptr<Skybox> skybox_model;
 
 
 float vertices[] = {
@@ -139,6 +142,8 @@ void offscr_pass() {
 
 
     jtp_model->Draw(*offscr_shader);
+    skybox_model->Draw(*skybox_shader, camera::g_Camera);
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -228,14 +233,14 @@ void render() {
     glm::mat4 projection = glm::perspective(glm::radians(camera::g_Camera.Zoom), (float)800 / 600, 0.1f, 100.0f);
 
 
-    shaderLC->use();
+    light_cube_shader->use();
 
     model = glm::mat4(1.0f);
     model = glm::translate(model, g_Engine.LIGHT_POS);
     model = glm::scale(model, glm::vec3(0.5f));
-    shaderLC->setMat4("model", model);
-    shaderLC->setMat4("view", view);
-    shaderLC->setMat4("projection", projection);
+    light_cube_shader->setMat4("model", model);
+    light_cube_shader->setMat4("view", view);
+    light_cube_shader->setMat4("projection", projection);
 
 
     lightCubeVAO_ptr->bind();
@@ -244,16 +249,18 @@ void render() {
 
 int init() {
 
-    // do something for this
+    // TODO: do something for this
     stbi_set_flip_vertically_on_load(true);
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glEnable(GL_STENCIL_TEST);
 
+    // TODO: This whole init section is messed up
     Shader shader_l("./shaders/default_obj_vs.glsl", "./shaders/default_obj_fs.glsl");
     Shader shaderLC_l("./shaders/light_cube_vs.glsl", "./shaders/light_cube_fs.glsl");
     Shader shader_pp("./shaders/screen_PP_vs.glsl", "./shaders/screen_PP_fs.glsl");
+    Shader shader_skb("./shaders/skybox_vs.glsl", "./shaders/skybox_fs.glsl");
 
     //Model jtp_model("./assets/John_the_Baptist.obj");
 
@@ -287,11 +294,28 @@ int init() {
     lightCubeVAO_ptr = &lightCubeVAO;
 
     offscr_shader = std::make_unique<Shader>(shader_l);
-    shaderLC = std::make_unique<Shader>(shaderLC_l);
+    light_cube_shader = std::make_unique<Shader>(shaderLC_l);
     pp_shader = std::make_unique<Shader>(shader_pp);
+    skybox_shader = std::make_unique<Shader>(shader_skb);
 
     std::unique_ptr<Model> p(new Model("./assets/backpack.obj"));
     jtp_model.swap(p);
+
+    const std::string base = "./tex/skybox/";
+    const std::array<std::string, 6> faces = {
+        base + "right.jpg",
+        base + "left.jpg",
+        base + "top.jpg",
+        base + "bottom.jpg",
+        base + "front.jpg",
+        base + "back.jpg"
+    };
+
+    for (int j = 0; j < 6; j++)
+        std::cout << "FACE::" << j << "::" << faces[j] << std::endl;
+
+    std::unique_ptr<Skybox> sk(new Skybox(faces));
+    skybox_model.swap(sk);
 
     setup_offscr_pass();
     setup_postprocess_pass();

@@ -22,6 +22,18 @@ struct TextureConfig {
     int wrap_t;
     int wrap_s;
     int wrap_r;
+
+    TextureConfig() {
+        level = 0;
+
+        // sentinel to state manual format detection
+        format = format_internal = -1;
+
+        mag_filter = GL_LINEAR;
+        min_filter = GL_LINEAR_MIPMAP_LINEAR;
+
+        wrap_t = wrap_s = wrap_r = GL_REPEAT;
+    }
 };
 
 static inline GLenum get_color_format(int number_of_channels) {
@@ -38,7 +50,6 @@ static inline GLenum get_color_format(int number_of_channels) {
 
 class Texture {
 private:
-    TextureConfig m_TexConfig;
     unsigned int m_TextureID;
     unsigned char* m_Buffer;
     unsigned int m_Width, m_Height;
@@ -51,8 +62,7 @@ public:
     Texture();
 
     void init();
-    void load(const std::string& path);
-    void load(const std::string& path, TextureConfig texture_conf);
+    void load(const std::string& path, TextureConfig tex_conf = TextureConfig());
     void bind(unsigned int slot);
 };
 

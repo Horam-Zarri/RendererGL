@@ -14,7 +14,6 @@ public:
     }
 
     ~VBO() {
-        std::cout << "OYA" << std::endl;
         glDeleteBuffers(1, &m_BufferID);
     }
 
