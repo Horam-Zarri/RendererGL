@@ -74,8 +74,6 @@ Skybox::Skybox(std::array<std::string, 6> faces)
 void Skybox::Draw(Shader& shader, const renderer::camera::Camera& camera) {
     glDepthFunc(GL_LEQUAL);
 
-    std::cout << "DRAWING_SKYBOX" << std::endl;
-
     shader.use();
     shader.setFloat("skybox", 0);
     shader.setMat4("view", glm::mat4(glm::mat3(camera.GetViewMatrix())));
