@@ -24,6 +24,18 @@ struct TextureConfig {
     int wrap_r;
 };
 
+static inline GLenum get_color_format(int number_of_channels) {
+    switch(number_of_channels) {
+        case 1: return GL_RED;
+        case 2: return GL_RG;
+        case 3: return GL_RGB;
+        case 4: return GL_RGBA;
+        default:
+            std::cout << "WARN::Cannot identify color channel" << std::endl;
+            return -1;
+    }
+}
+
 class Texture {
 private:
     TextureConfig m_TexConfig;

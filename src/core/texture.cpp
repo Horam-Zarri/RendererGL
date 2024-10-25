@@ -30,13 +30,7 @@ void Texture::load(const std::string& path) {
     unsigned char *data = stbi_load(path.c_str(), (int*)&m_Width, (int*)&m_Height, &nrComponents, 0);
     if (data)
     {
-        GLenum format = 0;
-        if (nrComponents == 1)
-            format = GL_RED;
-        else if (nrComponents == 3)
-            format = GL_RGB;
-        else if (nrComponents == 4)
-            format = GL_RGBA;
+        GLenum format = get_color_format(nrComponents);
 
         m_TexConfig.format_internal = m_TexConfig.format = format;
 
