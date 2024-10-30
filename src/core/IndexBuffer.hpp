@@ -4,17 +4,17 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-class EBO {
+class IndexBuffer {
 private:
 	unsigned int m_BufferID;
     unsigned int m_Count;
 public:
 
-    EBO(): m_Count(0) {
+    IndexBuffer(): m_Count(0) {
         glGenBuffers(1, &m_BufferID);
     }
 
-	~EBO() {
+	~IndexBuffer() {
         glDeleteBuffers(1, &m_BufferID);
 	}
 

@@ -1,19 +1,19 @@
-#ifndef VBO_H
-#define VBO_H
+#ifndef VERTEXBUFFER_H
+#define VERTEXBUFFER_H
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
 
-class VBO {
+class VertexBuffer {
 private:
     unsigned int m_BufferID;
 public:
-    VBO() {
+    VertexBuffer() {
         glGenBuffers(1, &m_BufferID);
     }
 
-    ~VBO() {
+    ~VertexBuffer() {
         glDeleteBuffers(1, &m_BufferID);
     }
 

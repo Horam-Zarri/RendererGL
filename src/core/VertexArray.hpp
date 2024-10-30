@@ -1,9 +1,9 @@
-#ifndef VAO_H
-#define VAO_H
+#ifndef VERTEXARRAY_H
+#define VERTEXARRAY_H
 
 #include <vector>
 
-#include "VBO.hpp"
+#include "VertexBuffer.hpp"
 
 struct VBElement {
     unsigned int type;
@@ -56,21 +56,21 @@ public:
     inline unsigned int stride() const {return m_Stride;}
 };
 
-class VAO {
+class VertexArray {
 private:
     unsigned int m_BufferID;
 
 public:
 
-    VAO() {
+    VertexArray() {
         glGenVertexArrays(1, &m_BufferID);
     }
 
-    ~VAO() {
+    ~VertexArray() {
         glDeleteVertexArrays(1, &m_BufferID);
     }
 
-    void send_data(const VBO& vbo, VBLayout layout) {
+    void send_data(const VertexBuffer& vbo, VBLayout layout) {
         bind();
         vbo.bind();
         size_t offset = 0;

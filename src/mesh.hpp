@@ -7,8 +7,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "core/EBO.hpp"
-#include "core/VAO.hpp"
+#include "core/IndexBuffer.hpp"
+#include "core/VertexArray.hpp"
 #include "core/material.hpp"
 #include "core/texture.hpp"
 #include "shader.hpp"
@@ -25,9 +25,9 @@ struct Vertex {
 
 class Mesh {
 private:
-    VAO m_VAO;
-    VBO m_VBO;
-    EBO m_EBO;
+    VertexArray m_VAO;
+    VertexBuffer m_VBO;
+    IndexBuffer m_EBO;
 
     unsigned int m_VertexCount;
     std::unique_ptr<Material> m_Material;

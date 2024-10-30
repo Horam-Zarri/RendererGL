@@ -2,8 +2,8 @@
 #define SKYBOX_H
 
 #include "camera.hpp"
-#include "core/VAO.hpp"
-#include "core/VBO.hpp"
+#include "core/VertexArray.hpp"
+#include "core/VertexBuffer.hpp"
 #include "core/cubemap.hpp"
 #include "shader.hpp"
 
@@ -12,8 +12,8 @@ class Skybox {
 private:
     Cubemap m_Skymap;
 
-    VBO m_VBO;
-    VAO m_VAO;
+    VertexBuffer m_VBO;
+    VertexArray m_VAO;
 public:
 
     Skybox(std::array<std::string, 6> faces);

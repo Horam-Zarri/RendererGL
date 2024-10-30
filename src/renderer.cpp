@@ -2,8 +2,6 @@
 #include "renderer.hpp"
 #include "GLFW/glfw3.h"
 #include "camera.hpp"
-#include "core/VAO.hpp"
-#include "core/VBO.hpp"
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/trigonometric.hpp>
 #include "cube.hpp"

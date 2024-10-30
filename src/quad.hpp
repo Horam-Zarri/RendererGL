@@ -4,8 +4,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "core/VAO.hpp"
-#include "core/VBO.hpp"
+#include "core/VertexBuffer.hpp"
+#include "core/VertexArray.hpp"
 #include "mesh.hpp"
 
 static constexpr float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
@@ -37,8 +37,8 @@ public:
         m_VAO.unbind();
     }
 private:
-    VAO m_VAO;
-    VBO m_VBO;
+    VertexArray m_VAO;
+    VertexBuffer m_VBO;
 };
 
 #endif

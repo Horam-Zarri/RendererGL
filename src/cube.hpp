@@ -1,8 +1,8 @@
 #ifndef CUBE_H
 #define CUBE_H
 
-#include "core/VAO.hpp"
-#include "core/VBO.hpp"
+#include "core/VertexBuffer.hpp"
+#include "core/VertexArray.hpp"
 
 static constexpr float cubeVertices[] = {
     -0.5f, -0.5f, -0.5f,
@@ -66,8 +66,8 @@ public:
         m_VAO.unbind();
     }
 private:
-    VAO m_VAO;
-    VBO m_VBO;
+    VertexArray m_VAO;
+    VertexBuffer m_VBO;
 
 };
 

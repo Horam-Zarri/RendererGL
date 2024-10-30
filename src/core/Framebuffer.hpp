@@ -5,9 +5,6 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-enum class AttachmentType {
-    TEXTURE_2D, RENDERBUFFER
-};
 
 class FBO {
 private:
@@ -24,6 +21,8 @@ public:
         glFramebufferTexture2D(GL_FRAMEBUFFER, attachment_target,
                                GL_TEXTURE_2D, texture.id(), 0);
     }
+
+    void attachRenderBuffer(int attachent_target);
 
     inline void bind() const {
         glBindFramebuffer(GL_FRAMEBUFFER, m_FrameBufferID);
