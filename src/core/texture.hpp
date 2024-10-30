@@ -9,7 +9,8 @@
 #include <stb_image.h>
 
 enum class TextureType {
-    DIFFUSE, SPECULAR
+    DIFFUSE, SPECULAR,
+    COLOR_ATTACH, DEPTH_STENCIL_ATTACH
 };
 
 struct TextureConfig {
@@ -51,10 +52,12 @@ static inline GLenum get_color_format(int number_of_channels) {
 class Texture {
 private:
     unsigned int m_TextureID;
-    unsigned char* m_Buffer;
     unsigned int m_Width, m_Height;
 
     bool m_Dirty;
+
+    // this is quite not a "pristine" kind of initialization handling
+    void handle_dirty();
 public:
     std::string m_Path;
     TextureType m_Type;
@@ -62,8 +65,16 @@ public:
     Texture();
 
     void init();
-    void load(const std::string& path, TextureConfig tex_conf = TextureConfig());
+    void gen_color_buffer(unsigned int width, unsigned int height);
+    void gen_depth_stencil_buffer(unsigned int width, unsigned int height);
+
+    void load_file(const std::string& path, TextureConfig tex_conf = TextureConfig());
+    void bind();
     void bind(unsigned int slot);
+
+    inline unsigned int id() const {
+        return m_TextureID;
+    }
 };
 
 #endif

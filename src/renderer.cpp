@@ -31,7 +31,7 @@ static glm::mat4 view_transform;
 static glm::mat4 projection_transform;
 
 static unsigned int offscr_fbo;
-static unsigned int offscr_tex;
+static Texture offscr_tex;
 
 static std::unique_ptr<Quad> screen_quad;
 static std::unique_ptr<Cube> dir_light_cube;
@@ -75,8 +75,7 @@ void send_postprocess_uniforms() {
     pp_shader->setBool("blur", g_Engine.BLUR_ENBL);
     pp_shader->setBool("grayscale", g_Engine.GRAYSCALE_ENBL);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, offscr_tex);
+    offscr_tex.bind(0);
 }
 
 void offscr_pass() {
@@ -103,16 +102,11 @@ void setup_offscr_pass() {
     glGenFramebuffers(1, &offscr_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, offscr_fbo);
 
-    glGenTextures(1, &offscr_tex);
-    glBindTexture(GL_TEXTURE_2D, offscr_tex);
+    offscr_tex.init();
+    offscr_tex.gen_color_buffer(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT, 0, GL_RGB,
-                 GL_UNSIGNED_BYTE, NULL);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                           offscr_tex, 0);
+                           offscr_tex.id(), 0);
     glGenRenderbuffers(1, &rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
@@ -280,18 +274,21 @@ void update_state() {
         g_Engine.GRAYSCALE_ENBL = ENGINE_STATE.GRAYSCALE_ENBL;
 
     if (g_Engine.RENDER_WIDTH != ENGINE_STATE.RENDER_WIDTH) {
-        std::cout << "ILIKETODOTHISALONEEEEEEEE" << std::endl;
-        g_Engine.RENDER_WIDTH = ENGINE_STATE.RENDER_WIDTH;
-        g_Engine.RENDER_HEIGHT = ENGINE_STATE.RENDER_HEIGHT;
-        glBindTexture(GL_TEXTURE_2D, offscr_tex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT, 0, GL_RGB,
-                     GL_UNSIGNED_BYTE, NULL);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-        glBindRenderbuffer(GL_RENDERBUFFER, 0);
-        glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-        window::resize_window(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        // TODO: Rewrite this with new FBO abstraction
+
+        /*
+            g_Engine.RENDER_WIDTH = ENGINE_STATE.RENDER_WIDTH;
+            g_Engine.RENDER_HEIGHT = ENGINE_STATE.RENDER_HEIGHT;
+            glBindTexture(GL_TEXTURE_2D, offscr_tex.id());
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT, 0, GL_RGB,
+                         GL_UNSIGNED_BYTE, NULL);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+            glBindRenderbuffer(GL_RENDERBUFFER, 0);
+            glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+            window::resize_window(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        */
     }
     ENGINE_STATE = g_Engine;
 }

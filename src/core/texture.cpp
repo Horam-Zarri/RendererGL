@@ -1,6 +1,5 @@
 #include "texture.hpp"
 
-
 Texture::Texture(): m_Dirty{true} {}
 
 void Texture::init() {
@@ -10,11 +9,51 @@ void Texture::init() {
 }
 
 
-void Texture::load(const std::string& path, TextureConfig tex_conf) {
+void Texture::handle_dirty() {
     if (m_Dirty) {
-        std::cerr << "Texture loaded before initialization!" << std::endl;
+        std::cerr << "TEXTURE:: Texture loaded/generated before initialization!" << std::endl;
+        std::exit(5);
     }
+}
+
+void Texture::gen_color_buffer(unsigned int width, unsigned int height) {
+    handle_dirty();
+
+    m_Type = TextureType::COLOR_ATTACH;
+
+    glBindTexture(GL_TEXTURE_2D, m_TextureID);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height,
+                 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Texture::gen_depth_stencil_buffer(unsigned int width, unsigned int height) {
+    handle_dirty();
+
+    m_Type = TextureType::DEPTH_STENCIL_ATTACH;
+
+    glBindTexture(GL_TEXTURE_2D, m_TextureID);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height, 0,
+                 GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+
+void Texture::load_file(const std::string& path, TextureConfig tex_conf) {
+    handle_dirty();
+
     m_Path = path;
+
+    // TODO: textures loaded from file do not currently need type
+    // specified but remember to do something with it anyways
+    m_Type = TextureType::DIFFUSE;
 
     int nrComponents;
     unsigned char *data = stbi_load(path.c_str(), (int*)&m_Width, (int*)&m_Height, &nrComponents, 0);
@@ -42,6 +81,10 @@ void Texture::load(const std::string& path, TextureConfig tex_conf) {
         std::cout << "Texture failed to load at path: " << path << std::endl;
         stbi_image_free(data);
     }
+}
+
+void Texture::bind() {
+    glBindTexture(GL_TEXTURE_2D, m_TextureID);
 }
 
 void Texture::bind(unsigned int slot) {

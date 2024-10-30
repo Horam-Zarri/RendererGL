@@ -1,7 +1,36 @@
 #ifndef FBO_H
 #define FBO_H
 
-class FBO {
+#include "core/texture.hpp"
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
+enum class AttachmentType {
+    TEXTURE_2D, RENDERBUFFER
+};
+
+class FBO {
+private:
+    unsigned int m_FrameBufferID;
+public:
+
+    FBO() {
+        glGenFramebuffers(1, &m_FrameBufferID);
+    }
+
+    void attachTexture(int attachment_target, Texture& texture)
+    {
+        bind();
+        glFramebufferTexture2D(GL_FRAMEBUFFER, attachment_target,
+                               GL_TEXTURE_2D, texture.id(), 0);
+    }
+
+    inline void bind() const {
+        glBindFramebuffer(GL_FRAMEBUFFER, m_FrameBufferID);
+    }
+
+    inline void unbind() const {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
 };
 #endif
