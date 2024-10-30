@@ -31,6 +31,9 @@ struct EngineState {
     uint32_t RENDER_WIDTH, RENDER_HEIGHT;
     uint32_t SCREEN_WIDTH, SCREEN_HEIGHT;
 
+    unsigned int MSAA_ENBL;
+    unsigned int MSAA_MULTIPLIER;
+
     EngineState() {
         LIGHT_POS = glm::vec3(4.0f, 2.0f, 3.0f);
         LIGHT_AMBIENT = glm::vec3(0.1f);
@@ -57,6 +60,9 @@ struct EngineState {
 
         RENDER_WIDTH = SCREEN_WIDTH = 1280;
         RENDER_HEIGHT = SCREEN_HEIGHT = 720;
+
+        MSAA_ENBL = true;
+        MSAA_MULTIPLIER = 4;
     }
 };
 

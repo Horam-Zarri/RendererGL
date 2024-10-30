@@ -10,7 +10,8 @@
 
 enum class TextureType {
     DIFFUSE, SPECULAR,
-    COLOR_ATTACH, DEPTH_STENCIL_ATTACH
+    COLOR_ATTACH, COLOR_ATTACH_MULTISAMPLE,
+    DEPTH_STENCIL_ATTACH
 };
 
 struct TextureConfig {
@@ -65,7 +66,7 @@ public:
     Texture();
 
     void init();
-    void gen_color_buffer(unsigned int width, unsigned int height);
+    void gen_color_buffer(unsigned int width, unsigned int height, bool multisample = false);
     void gen_depth_stencil_buffer(unsigned int width, unsigned int height);
 
     void resize(unsigned int width, unsigned height);

@@ -1,4 +1,6 @@
 #include "texture.hpp"
+#include "camera.hpp"
+#include "renderer.hpp"
 
 Texture::Texture(): m_Dirty{true} {}
 
@@ -16,15 +18,27 @@ void Texture::handle_dirty() {
     }
 }
 
-void Texture::gen_color_buffer(unsigned int width, unsigned int height) {
+void Texture::gen_color_buffer(unsigned int width, unsigned int height, bool multisample) {
     handle_dirty();
 
-    m_Type = TextureType::COLOR_ATTACH;
+    m_Type = multisample ? TextureType::COLOR_ATTACH_MULTISAMPLE :
+            TextureType::COLOR_ATTACH;
 
     glBindTexture(GL_TEXTURE_2D, m_TextureID);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height,
-                 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    if (multisample)
+        glTexImage2DMultisample(
+            GL_TEXTURE_2D_MULTISAMPLE,
+            renderer::g_Engine.MSAA_MULTIPLIER,
+            GL_RGB,
+            width,
+            height,
+            GL_TRUE
+        );
+    else
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, GL_RGB, width, height,
+            0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -49,11 +63,19 @@ void Texture::resize(unsigned int width, unsigned int height) {
     // somewhat straightforward solution for now
     switch(m_Type) {
         case TextureType::COLOR_ATTACH:
-        gen_color_buffer(width, height);
-        break;
+            gen_color_buffer(width, height, false);
+            break;
+
+        case TextureType::COLOR_ATTACH_MULTISAMPLE:
+            gen_color_buffer(width, height, true);
+            break;
+
         case TextureType::DEPTH_STENCIL_ATTACH:
-        gen_depth_stencil_buffer(width, height);
-        break;
+            gen_depth_stencil_buffer(width, height);
+            break;
+
+        default:
+            break;
     }
 }
 void Texture::load_file(const std::string& path, TextureConfig tex_conf) {

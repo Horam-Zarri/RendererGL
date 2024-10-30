@@ -30,15 +30,18 @@ EngineState ENGINE_STATE;
 static glm::mat4 view_transform;
 static glm::mat4 projection_transform;
 
+// if MSAA is enabled we draw to msaa_fbo then blit to offscr_fbo
+static std::unique_ptr<Framebuffer> msaa_fbo;
+static std::unique_ptr<Renderbuffer> msaa_rbo;
+static Texture msaa_tex;
+
+// if MSAA is disabled we draw directly to offscr_fbo
 static std::unique_ptr<Framebuffer> offscr_fbo;
 static std::unique_ptr<Renderbuffer> offscr_rbo;
 static Texture offscr_tex;
 
 static std::unique_ptr<Quad> screen_quad;
 static std::unique_ptr<Cube> dir_light_cube;
-
-// TODO: add msaa pass
-static unsigned int msaa_fbo;
 
 static std::unique_ptr<Shader> offscr_shader;
 static std::unique_ptr<Shader> pp_shader;
@@ -85,7 +88,10 @@ void offscr_pass() {
     offscr_shader->use();
     send_offscr_uniforms();
 
-    offscr_fbo->bind();
+    if (g_Engine.MSAA_ENBL)
+        msaa_fbo->bind();
+    else
+        offscr_fbo->bind();
 
     glEnable(GL_DEPTH_TEST);
 
@@ -97,6 +103,9 @@ void offscr_pass() {
     skybox_model->Draw(*skybox_shader, camera::g_Camera);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    if (g_Engine.MSAA_ENBL)
+        msaa_fbo->blitTo(*offscr_fbo, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 }
 
 
@@ -105,10 +114,8 @@ void setup_offscr_pass() {
 
     offscr_fbo = std::make_unique<Framebuffer>();
 
-
     offscr_tex.init();
     offscr_tex.gen_color_buffer(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-
 
     offscr_rbo = std::unique_ptr<Renderbuffer>
         (new Renderbuffer(
@@ -119,6 +126,21 @@ void setup_offscr_pass() {
 
     offscr_fbo->attachTexture(GL_COLOR_ATTACHMENT0, offscr_tex);
     offscr_fbo->attachRenderBuffer(GL_DEPTH_STENCIL_ATTACHMENT, *offscr_rbo);
+
+    msaa_fbo = std::make_unique<Framebuffer>();
+
+    msaa_tex.init();
+    msaa_tex.gen_color_buffer(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+
+    msaa_rbo = std::unique_ptr<Renderbuffer>
+        (new Renderbuffer(
+            RBType::DEPTH_STENCIL_MULTISAMPLE,
+            g_Engine.RENDER_WIDTH,
+            g_Engine.RENDER_HEIGHT
+        ));
+
+    msaa_fbo->attachTexture(GL_COLOR_ATTACHMENT0, msaa_tex);
+    msaa_fbo->attachRenderBuffer(GL_DEPTH_STENCIL_ATTACHMENT, *msaa_rbo);
 
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" <<
@@ -193,6 +215,7 @@ int init() {
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+    glEnable(GL_MULTISAMPLE);
     glEnable(GL_STENCIL_TEST);
 
     // TODO: This whole init section is messed up
@@ -281,17 +304,29 @@ void update_state() {
     if (g_Engine.GRAYSCALE_ENBL != ENGINE_STATE.GRAYSCALE_ENBL)
         g_Engine.GRAYSCALE_ENBL = ENGINE_STATE.GRAYSCALE_ENBL;
 
-    if (g_Engine.RENDER_WIDTH != ENGINE_STATE.RENDER_WIDTH) {
-        // TODO: Rewrite this with new FBO abstraction
 
+    // must update msaa before resizing
+    if (g_Engine.MSAA_ENBL != ENGINE_STATE.MSAA_ENBL)
+        g_Engine.MSAA_ENBL = ENGINE_STATE.MSAA_ENBL;
+
+    if (g_Engine.MSAA_ENBL && (g_Engine.MSAA_MULTIPLIER != ENGINE_STATE.MSAA_MULTIPLIER)) {
+        // resize implementation of Texture and Renderbuffer
+        // handles MSAA change below
+        g_Engine.MSAA_MULTIPLIER = ENGINE_STATE.MSAA_MULTIPLIER;
+    }
+
+    if (g_Engine.RENDER_WIDTH != ENGINE_STATE.RENDER_WIDTH) {
 
         g_Engine.RENDER_WIDTH = ENGINE_STATE.RENDER_WIDTH;
         g_Engine.RENDER_HEIGHT = ENGINE_STATE.RENDER_HEIGHT;
 
+        msaa_tex.resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        msaa_rbo->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+
         offscr_tex.resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
         offscr_rbo->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-
     }
+
     ENGINE_STATE = g_Engine;
 }
 void terminate() {}

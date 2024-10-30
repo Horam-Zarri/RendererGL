@@ -93,7 +93,12 @@ void settings_panel() {
             "3840x2160"
         };
 
-        if (ImGui::Combo("Render Res", &selected_res, res_options, IM_ARRAYSIZE(res_options))) {
+        if (ImGui::Combo(
+                "Render Res",
+                &selected_res,
+                res_options,
+                IM_ARRAYSIZE(res_options)
+        )) {
             std::string rs = res_options[selected_res];
 
             unsigned int res_w = std::stoi(rs.substr(0, rs.find('x')));
@@ -101,6 +106,26 @@ void settings_panel() {
 
             ENGINE_STATE.RENDER_WIDTH = res_w;
             ENGINE_STATE.RENDER_HEIGHT = res_h;
+        }
+
+        const char* antialiasing_options[] = {
+            "Disabled",
+            "MSAA x2",
+            "MSAA x4",
+            "MSAA x8",
+        };
+
+        static int aa_state = 2;
+
+        if (ImGui::Combo(
+            "Antialiasing",
+            &aa_state,
+            antialiasing_options,
+            IM_ARRAYSIZE(antialiasing_options)
+        )) {
+            // not elegant, yet so robust
+            ENGINE_STATE.MSAA_ENBL = aa_state == 0 ? false : true;
+            ENGINE_STATE.MSAA_MULTIPLIER = std::pow(2, aa_state);
         }
 
         ImGui::ColorEdit4("Clear color", &ENGINE_STATE.CLEAR_COLOR.x);
