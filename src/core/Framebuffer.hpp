@@ -1,17 +1,18 @@
-#ifndef FBO_H
-#define FBO_H
+#ifndef FRAMEBUFFER_H
+#define FRAMEBUFFER_H
 
+#include "core/Renderbuffer.hpp"
 #include "core/texture.hpp"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 
-class FBO {
+class Framebuffer {
 private:
     unsigned int m_FrameBufferID;
 public:
 
-    FBO() {
+    Framebuffer() {
         glGenFramebuffers(1, &m_FrameBufferID);
     }
 
@@ -22,7 +23,11 @@ public:
                                GL_TEXTURE_2D, texture.id(), 0);
     }
 
-    void attachRenderBuffer(int attachent_target);
+    void attachRenderBuffer(int attachent_target, Renderbuffer& rbo) {
+        bind();
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachent_target,
+                                  GL_RENDERBUFFER, rbo.id());
+    }
 
     inline void bind() const {
         glBindFramebuffer(GL_FRAMEBUFFER, m_FrameBufferID);

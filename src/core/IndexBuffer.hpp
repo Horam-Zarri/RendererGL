@@ -1,5 +1,5 @@
-#ifndef EBO_H
-#define EBO_H
+#ifndef INDEXBUFFER_H
+#define INDEXBUFFER_H
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>

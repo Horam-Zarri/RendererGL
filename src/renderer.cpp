@@ -4,6 +4,7 @@
 #include "camera.hpp"
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/trigonometric.hpp>
+#include "core/Renderbuffer.hpp"
 #include "cube.hpp"
 #include "quad.hpp"
 #include "shader.hpp"
@@ -12,6 +13,7 @@
 #include <stb_image.h>
 #include "model.hpp"
 #include "core/texture.hpp"
+#include "core/Framebuffer.hpp"
 #include "skybox.hpp"
 #include "window.hpp"
 
@@ -28,14 +30,15 @@ EngineState ENGINE_STATE;
 static glm::mat4 view_transform;
 static glm::mat4 projection_transform;
 
-static unsigned int offscr_fbo;
+static std::unique_ptr<Framebuffer> offscr_fbo;
+static std::unique_ptr<Renderbuffer> offscr_rbo;
 static Texture offscr_tex;
 
 static std::unique_ptr<Quad> screen_quad;
 static std::unique_ptr<Cube> dir_light_cube;
 
+// TODO: add msaa pass
 static unsigned int msaa_fbo;
-static unsigned int postprocess_fbo;
 
 static std::unique_ptr<Shader> offscr_shader;
 static std::unique_ptr<Shader> pp_shader;
@@ -80,7 +83,8 @@ void offscr_pass() {
     offscr_shader->use();
     send_offscr_uniforms();
 
-    glBindFramebuffer(GL_FRAMEBUFFER, offscr_fbo);
+    offscr_fbo->bind();
+
     glEnable(GL_DEPTH_TEST);
 
     glClearColor(g_Engine.CLEAR_COLOR.r,g_Engine.CLEAR_COLOR.g, g_Engine.CLEAR_COLOR.b, g_Engine.CLEAR_COLOR.a); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
@@ -94,28 +98,30 @@ void offscr_pass() {
 }
 
 
-static unsigned int rbo;
 
 void setup_offscr_pass() {
-    glGenFramebuffers(1, &offscr_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, offscr_fbo);
+
+    offscr_fbo = std::make_unique<Framebuffer>();
+
 
     offscr_tex.init();
     offscr_tex.gen_color_buffer(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                           offscr_tex.id(), 0);
-    glGenRenderbuffers(1, &rbo);
-    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-    glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
-                              GL_RENDERBUFFER, rbo);
+    offscr_rbo = std::unique_ptr<Renderbuffer>
+        (new Renderbuffer(
+            RBType::DEPTH_STENCIL,
+            g_Engine.RENDER_WIDTH,
+            g_Engine.RENDER_HEIGHT
+        ));
+
+    offscr_fbo->attachTexture(GL_COLOR_ATTACHMENT0, offscr_tex);
+    offscr_fbo->attachRenderBuffer(GL_DEPTH_STENCIL_ATTACHMENT, *offscr_rbo);
 
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" <<
             std::endl;
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
