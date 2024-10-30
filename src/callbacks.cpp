@@ -11,9 +11,7 @@ using namespace window;
 
 void callback::framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
-    renderer::VIEWPORT_WIDTH = width;
-    renderer::VIEWPORT_HEIGHT = height;
-    glViewport(0, 0, width, height);
+    //glViewport(0, 0, width, height);
 }
 
 void callback::process_input(GLFWwindow *window, float delta_frame)

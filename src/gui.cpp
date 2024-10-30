@@ -2,6 +2,9 @@
 #include "imgui.h"
 #include "renderer.hpp"
 #include <iostream>
+#include <string>
+#include <unordered_map>
+#include <utility>
 
 float x = 50;
 
@@ -76,6 +79,30 @@ void settings_panel() {
 
         ImGui::SeparatorText("General");
 
+        // default res_options[2] = 1280x720
+        static int selected_res = 2;
+
+        const char* res_options[] = {
+            "1024x576",
+            "1152x648",
+            "1280x720",
+            "1366x768",
+            "1600x900",
+            "1920x1080",
+            "2560x1440",
+            "3840x2160"
+        };
+
+        if (ImGui::Combo("Render Res", &selected_res, res_options, IM_ARRAYSIZE(res_options))) {
+            std::string rs = res_options[selected_res];
+
+            unsigned int res_w = std::stoi(rs.substr(0, rs.find('x')));
+            unsigned int res_h = std::stoi(rs.substr(rs.find('x') + 1));
+
+            ENGINE_STATE.RENDER_WIDTH = res_w;
+            ENGINE_STATE.RENDER_HEIGHT = res_h;
+        }
+
         ImGui::ColorEdit4("Clear color", &ENGINE_STATE.CLEAR_COLOR.x);
 
         ImGui::SeparatorText("Lighting");
@@ -110,7 +137,7 @@ void settings_panel() {
                 ENGINE_STATE.SHARPNESS_ENBL = false;
                 ENGINE_STATE.BLUR_ENBL = false;
                 ENGINE_STATE.GRAYSCALE_ENBL = false;
-            break;
+                break;
             case 1:
                 ENGINE_STATE.SHARPNESS_ENBL = true;
                 ENGINE_STATE.BLUR_ENBL = false;
@@ -119,19 +146,19 @@ void settings_panel() {
                 ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.5f);
                 ImGui::SliderFloat("Sharpness amount", &ENGINE_STATE.SHARPNESS_AMOUNT, 0.0f, 1.0f);
                 ImGui::PopItemWidth();
-            break;
+                break;
             case 2:
                 ENGINE_STATE.BLUR_ENBL = true;
                 ENGINE_STATE.SHARPNESS_ENBL = false;
                 ENGINE_STATE.GRAYSCALE_ENBL = false;
-            break;
+                break;
             case 3:
                 ENGINE_STATE.GRAYSCALE_ENBL = true;
                 ENGINE_STATE.SHARPNESS_ENBL = false;
                 ENGINE_STATE.BLUR_ENBL = false;
-            break;
+                break;
             default:
-            break;
+                break;
         }
 
 

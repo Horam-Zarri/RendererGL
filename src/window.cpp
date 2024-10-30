@@ -52,6 +52,10 @@ bool window::should_terminate() {
     return glfwWindowShouldClose(_Window);
 }
 
+void window::resize_window(int width, int height) {
+    glfwSetWindowSize(_Window, width, height);
+}
+
 void window::handle_input() {
     float current_frame = static_cast<float>(glfwGetTime());
     delta_frame = current_frame - last_frame;

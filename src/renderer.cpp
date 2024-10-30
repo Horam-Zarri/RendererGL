@@ -1,5 +1,6 @@
 
 #include "renderer.hpp"
+#include "GLFW/glfw3.h"
 #include "camera.hpp"
 #include "core/VAO.hpp"
 #include "core/VBO.hpp"
@@ -95,6 +96,9 @@ void offscr_pass() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+
+static unsigned int rbo;
+
 void setup_offscr_pass() {
     glGenFramebuffers(1, &offscr_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, offscr_fbo);
@@ -102,17 +106,16 @@ void setup_offscr_pass() {
     glGenTextures(1, &offscr_tex);
     glBindTexture(GL_TEXTURE_2D, offscr_tex);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, VIEWPORT_WIDTH, VIEWPORT_HEIGHT, 0, GL_RGB,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT, 0, GL_RGB,
                  GL_UNSIGNED_BYTE, NULL);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                            offscr_tex, 0);
-    unsigned int rbo;
     glGenRenderbuffers(1, &rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
@@ -276,6 +279,20 @@ void update_state() {
     if (g_Engine.GRAYSCALE_ENBL != ENGINE_STATE.GRAYSCALE_ENBL)
         g_Engine.GRAYSCALE_ENBL = ENGINE_STATE.GRAYSCALE_ENBL;
 
+    if (g_Engine.RENDER_WIDTH != ENGINE_STATE.RENDER_WIDTH) {
+        std::cout << "ILIKETODOTHISALONEEEEEEEE" << std::endl;
+        g_Engine.RENDER_WIDTH = ENGINE_STATE.RENDER_WIDTH;
+        g_Engine.RENDER_HEIGHT = ENGINE_STATE.RENDER_HEIGHT;
+        glBindTexture(GL_TEXTURE_2D, offscr_tex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT, 0, GL_RGB,
+                     GL_UNSIGNED_BYTE, NULL);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+        glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        window::resize_window(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+    }
     ENGINE_STATE = g_Engine;
 }
 void terminate() {}

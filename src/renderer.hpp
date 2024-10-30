@@ -28,8 +28,8 @@ struct EngineState {
 
     float NEAR_PLANE, FAR_PLANE, FOV;
 
-    uint32_t RENDER_WIDTH;
-    uint32_t RENDER_HEIGHT;
+    uint32_t RENDER_WIDTH, RENDER_HEIGHT;
+    uint32_t SCREEN_WIDTH, SCREEN_HEIGHT;
 
     EngineState() {
         LIGHT_POS = glm::vec3(4.0f, 2.0f, 3.0f);
@@ -55,6 +55,8 @@ struct EngineState {
         NEAR_PLANE = 0.1f;
         FAR_PLANE = 100.0f;
 
+        RENDER_WIDTH = SCREEN_WIDTH = 1280;
+        RENDER_HEIGHT = SCREEN_HEIGHT = 720;
     }
 };
 
@@ -67,9 +69,6 @@ extern EngineState ENGINE_STATE;
 extern EngineState g_Engine;
 
 constexpr static float ASPECT_RATIO = 16.0 / 9.0;
-
-static unsigned int VIEWPORT_WIDTH = 1280;
-static unsigned int VIEWPORT_HEIGHT = 720;
 
 int init();
 void update_state();
