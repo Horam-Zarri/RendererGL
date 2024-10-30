@@ -5,6 +5,8 @@
 #include "core/VBO.hpp"
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/trigonometric.hpp>
+#include "cube.hpp"
+#include "quad.hpp"
 #include "shader.hpp"
 #include <glm/vec3.hpp>
 #include <memory>
@@ -30,8 +32,10 @@ static glm::mat4 projection_transform;
 static unsigned int offscr_fbo;
 static unsigned int offscr_tex;
 
-static VAO* quadVAO_ptr;
+static std::unique_ptr<Quad> screen_quad;
+static std::unique_ptr<Cube> dir_light_cube;
 
+static unsigned int msaa_fbo;
 static unsigned int postprocess_fbo;
 
 static std::unique_ptr<Shader> offscr_shader;
@@ -43,62 +47,6 @@ static std::unique_ptr<Model> jtp_model;
 static std::unique_ptr<Skybox> skybox_model;
 
 
-float vertices[] = {
-        -0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f,  0.5f, -0.5f,
-         0.5f,  0.5f, -0.5f,
-        -0.5f,  0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f,
-
-        -0.5f, -0.5f,  0.5f,
-         0.5f, -0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-        -0.5f,  0.5f,  0.5f,
-        -0.5f, -0.5f,  0.5f,
-
-        -0.5f,  0.5f,  0.5f,
-        -0.5f,  0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f,  0.5f,
-        -0.5f,  0.5f,  0.5f,
-
-         0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-
-        -0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f,  0.5f,
-         0.5f, -0.5f,  0.5f,
-        -0.5f, -0.5f,  0.5f,
-        -0.5f, -0.5f, -0.5f,
-
-        -0.5f,  0.5f, -0.5f,
-         0.5f,  0.5f, -0.5f,
-         0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-        -0.5f,  0.5f,  0.5f,
-        -0.5f,  0.5f, -0.5f,
-    };
-
-float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
-    // positions   // texCoords
-    -1.0f,  1.0f,  0.0f, 1.0f,
-    -1.0f, -1.0f,  0.0f, 0.0f,
-    1.0f, -1.0f,  1.0f, 0.0f,
-
-    -1.0f,  1.0f,  0.0f, 1.0f,
-    1.0f, -1.0f,  1.0f, 0.0f,
-    1.0f,  1.0f,  1.0f, 1.0f
-};
-
-VAO* lightCubeVAO_ptr;
 
 void send_offscr_uniforms() {
     glm::mat4 md = glm::mat4(1.0f);
@@ -187,25 +135,12 @@ void postprocess_pass() {
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
     glClear(GL_COLOR_BUFFER_BIT);
 
-    quadVAO_ptr->bind();
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    quadVAO_ptr->unbind();
+    screen_quad->Draw();
 }
 
 void setup_postprocess_pass() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    VBLayout layout;
-
-    layout.push<float>(2);
-    layout.push<float>(2);
-
-    static VBO quadVBO;
-    quadVBO.send_data(quadVertices, sizeof quadVertices);
-    static VAO quadVAO;
-    quadVAO.send_data(quadVBO, layout);
-
-    quadVAO_ptr = &quadVAO;
+    screen_quad = std::make_unique<Quad>();
 }
 
 void render() {
@@ -243,8 +178,7 @@ void render() {
     light_cube_shader->setMat4("projection", projection);
 
 
-    lightCubeVAO_ptr->bind();
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    dir_light_cube->Draw();
 }
 
 int init() {
@@ -281,17 +215,7 @@ int init() {
     shaderLC_l.use();
 
 
-    VBLayout layout;
-    layout.push<float>(3);
-
-    static VAO lightCubeVAO;
-    static VBO lightCubeVBO;
-
-    lightCubeVAO.bind();
-    lightCubeVBO.send_data(vertices, sizeof vertices);
-    lightCubeVAO.send_data(lightCubeVBO, layout);
-
-    lightCubeVAO_ptr = &lightCubeVAO;
+    dir_light_cube = std::make_unique<Cube>();
 
     offscr_shader = std::make_unique<Shader>(shader_l);
     light_cube_shader = std::make_unique<Shader>(shaderLC_l);
