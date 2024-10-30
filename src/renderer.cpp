@@ -80,6 +80,8 @@ void send_postprocess_uniforms() {
 }
 
 void offscr_pass() {
+    glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+
     offscr_shader->use();
     send_offscr_uniforms();
 
@@ -127,6 +129,8 @@ void setup_offscr_pass() {
 
 
 void postprocess_pass() {
+    glViewport(0, 0, g_Engine.SCREEN_WIDTH, g_Engine.SCREEN_HEIGHT);
+
     pp_shader->use();
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -280,19 +284,13 @@ void update_state() {
     if (g_Engine.RENDER_WIDTH != ENGINE_STATE.RENDER_WIDTH) {
         // TODO: Rewrite this with new FBO abstraction
 
-        /*
-            g_Engine.RENDER_WIDTH = ENGINE_STATE.RENDER_WIDTH;
-            g_Engine.RENDER_HEIGHT = ENGINE_STATE.RENDER_HEIGHT;
-            glBindTexture(GL_TEXTURE_2D, offscr_tex.id());
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT, 0, GL_RGB,
-                         GL_UNSIGNED_BYTE, NULL);
-            glBindTexture(GL_TEXTURE_2D, 0);
-            glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-            glBindRenderbuffer(GL_RENDERBUFFER, 0);
-            glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-            window::resize_window(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-        */
+
+        g_Engine.RENDER_WIDTH = ENGINE_STATE.RENDER_WIDTH;
+        g_Engine.RENDER_HEIGHT = ENGINE_STATE.RENDER_HEIGHT;
+
+        offscr_tex.resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        offscr_rbo->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+
     }
     ENGINE_STATE = g_Engine;
 }

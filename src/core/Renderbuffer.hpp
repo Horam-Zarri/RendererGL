@@ -20,11 +20,15 @@ public:
     {
         glGenRenderbuffers(1, &m_BufferID);
         bind();
-        // TODO: storage based on RBType
+        // TODO: storage based on RBType (also resize function)
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
     }
 
+    void resize(unsigned int width, unsigned int height) const {
+        bind();
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+    }
     inline void bind() const {
         glBindRenderbuffer(GL_RENDERBUFFER, m_BufferID);
     }

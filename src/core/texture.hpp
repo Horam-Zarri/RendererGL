@@ -68,6 +68,8 @@ public:
     void gen_color_buffer(unsigned int width, unsigned int height);
     void gen_depth_stencil_buffer(unsigned int width, unsigned int height);
 
+    void resize(unsigned int width, unsigned height);
+
     void load_file(const std::string& path, TextureConfig tex_conf = TextureConfig());
     void bind();
     void bind(unsigned int slot);

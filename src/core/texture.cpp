@@ -45,7 +45,17 @@ void Texture::gen_depth_stencil_buffer(unsigned int width, unsigned int height) 
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-
+void Texture::resize(unsigned int width, unsigned int height) {
+    // somewhat straightforward solution for now
+    switch(m_Type) {
+        case TextureType::COLOR_ATTACH:
+        gen_color_buffer(width, height);
+        break;
+        case TextureType::DEPTH_STENCIL_ATTACH:
+        gen_depth_stencil_buffer(width, height);
+        break;
+    }
+}
 void Texture::load_file(const std::string& path, TextureConfig tex_conf) {
     handle_dirty();
 
