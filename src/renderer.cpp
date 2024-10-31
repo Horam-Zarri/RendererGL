@@ -309,10 +309,14 @@ void update_state() {
     if (g_Engine.MSAA_ENBL != ENGINE_STATE.MSAA_ENBL)
         g_Engine.MSAA_ENBL = ENGINE_STATE.MSAA_ENBL;
 
+
+    bool regen_buffers = false;
+
     if (g_Engine.MSAA_ENBL && (g_Engine.MSAA_MULTIPLIER != ENGINE_STATE.MSAA_MULTIPLIER)) {
         // resize implementation of Texture and Renderbuffer
         // handles MSAA change below
         g_Engine.MSAA_MULTIPLIER = ENGINE_STATE.MSAA_MULTIPLIER;
+        regen_buffers = true;
     }
 
     if (g_Engine.RENDER_WIDTH != ENGINE_STATE.RENDER_WIDTH) {
@@ -320,11 +324,23 @@ void update_state() {
         g_Engine.RENDER_WIDTH = ENGINE_STATE.RENDER_WIDTH;
         g_Engine.RENDER_HEIGHT = ENGINE_STATE.RENDER_HEIGHT;
 
+        regen_buffers = true;
+    }
+
+    if (regen_buffers) {
         msaa_tex.resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
         msaa_rbo->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
         offscr_tex.resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
         offscr_rbo->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+    }
+
+    if (g_Engine.SCREEN_WIDTH != ENGINE_STATE.SCREEN_WIDTH) {
+
+        g_Engine.SCREEN_WIDTH = ENGINE_STATE.SCREEN_WIDTH;
+        g_Engine.SCREEN_HEIGHT = ENGINE_STATE.SCREEN_HEIGHT;
+
+        window::resize_window(g_Engine.SCREEN_WIDTH, g_Engine.SCREEN_HEIGHT);
     }
 
     ENGINE_STATE = g_Engine;

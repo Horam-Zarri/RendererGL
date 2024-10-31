@@ -27,14 +27,14 @@ public:
     void resize(unsigned int width, unsigned int height) const {
         bind();
 
-        if (m_Type == RBType::DEPTH_STENCIL_MULTISAMPLE)
+        if (m_Type == RBType::DEPTH_STENCIL)
             glRenderbufferStorage(
                 GL_RENDERBUFFER,
                 GL_DEPTH24_STENCIL8,
                 width,
                 height
             );
-        else if (m_Type == RBType::DEPTH_STENCIL)
+        else if (m_Type == RBType::DEPTH_STENCIL_MULTISAMPLE)
             glRenderbufferStorageMultisample(
                 GL_RENDERBUFFER,
                 renderer::g_Engine.MSAA_MULTIPLIER,

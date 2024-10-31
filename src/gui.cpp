@@ -11,7 +11,6 @@ float x = 50;
 void settings_panel() {
 
 
-
     ImGuiViewport* window_full = ImGui::GetMainViewport();
 
     ImGui::SetNextWindowPos(ImVec2(window_full->Pos.x + window_full->Size.x * 0.7, window_full->Pos.y));
@@ -80,9 +79,13 @@ void settings_panel() {
         ImGui::SeparatorText("General");
 
         // default res_options[2] = 1280x720
-        static int selected_res = 2;
+        static int render_res_state = 5;
+        static int window_res_state = 5;
 
         const char* res_options[] = {
+            "640x360",
+            "854x480",
+            "960x540",
             "1024x576",
             "1152x648",
             "1280x720",
@@ -93,19 +96,40 @@ void settings_panel() {
             "3840x2160"
         };
 
-        if (ImGui::Combo(
-                "Render Res",
-                &selected_res,
-                res_options,
-                IM_ARRAYSIZE(res_options)
-        )) {
-            std::string rs = res_options[selected_res];
+        struct res_t {
+            unsigned int width;
+            unsigned int height;
+        };
 
+        auto str_to_res = [=](std::string rs) -> res_t {
             unsigned int res_w = std::stoi(rs.substr(0, rs.find('x')));
             unsigned int res_h = std::stoi(rs.substr(rs.find('x') + 1));
 
-            ENGINE_STATE.RENDER_WIDTH = res_w;
-            ENGINE_STATE.RENDER_HEIGHT = res_h;
+            return res_t {.width = res_w, .height = res_h};
+        };
+
+        if (ImGui::Combo(
+                "Render Res",
+                &render_res_state,
+                res_options,
+                IM_ARRAYSIZE(res_options)
+        )) {
+            res_t r = str_to_res(res_options[render_res_state]);
+
+            ENGINE_STATE.RENDER_WIDTH = r.width;
+            ENGINE_STATE.RENDER_HEIGHT = r.height;
+        }
+
+        if (ImGui::Combo(
+                "Window Res",
+                &window_res_state,
+                res_options,
+                IM_ARRAYSIZE(res_options)
+        )) {
+            res_t r = str_to_res(res_options[window_res_state]);
+
+            ENGINE_STATE.SCREEN_WIDTH = r.width;
+            ENGINE_STATE.SCREEN_HEIGHT = r.height;
         }
 
         const char* antialiasing_options[] = {
