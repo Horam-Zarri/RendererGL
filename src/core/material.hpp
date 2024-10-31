@@ -23,8 +23,10 @@ private:
     MaterialProperty m_Specular;
 
     bool m_UseTexture;
+    bool m_HasSpecular;
 public:
 
+    PhongMaterial(Texture diffuse_texture);
     PhongMaterial(Texture diffuse_texture, Texture specular_texture);
     PhongMaterial(glm::vec3 ambient, glm::vec3 diffuse, glm::vec3 specular);
     PhongMaterial(glm::vec3 obj_color);

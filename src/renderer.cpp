@@ -172,7 +172,6 @@ void setup_postprocess_pass() {
 
 void render() {
 
-    // render
     using namespace window;
 
     GLbitfield clr_enbl;

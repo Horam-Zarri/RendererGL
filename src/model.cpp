@@ -1,4 +1,5 @@
 #include "model.hpp"
+#include "core/material.hpp"
 
 #include <stb_image.h>
 
@@ -103,15 +104,24 @@ std::unique_ptr<Mesh> Model::processMesh(aiMesh* mesh, const aiScene* scene) {
                         specularMaps.end());
     }
 
+    std::cout << "AFTER MATERIAL" << std::endl;
+
     if (textures.empty()) {
         constexpr glm::vec3 DEFAULT_OBJ_COLOR(1.0f);
         return std::unique_ptr<Mesh>(
             new Mesh(vertices, indices, std::unique_ptr<PhongMaterial>
                      (new PhongMaterial(DEFAULT_OBJ_COLOR))));
     } else {
+        std::cout << "AFTER MATERIAL 2" << std::endl;
+        std::unique_ptr<Material> pm;
+
+        if (textures.size() == 1)
+            pm = std::make_unique<PhongMaterial>(textures[0]);
+        else
+            pm = std::make_unique<PhongMaterial>(textures[0], textures[1]);
+
         return std::unique_ptr<Mesh>(
-            new Mesh(vertices, indices, std::unique_ptr<PhongMaterial>
-                     (new PhongMaterial(textures[0], textures[1]))));
+            new Mesh(vertices, indices, std::move(pm)));
     }
 }
 
@@ -151,6 +161,5 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
         }
     }
 
-    std::cout << "BEFORE_RETURN" << std::endl;
     return textures;
 }
