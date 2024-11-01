@@ -22,6 +22,7 @@ void PhongMaterial::send_uniforms(Shader& shader)  {
     if (m_UseTexture) {
         shader.setFloat("material.texture_diffuse", 0);
         shader.setFloat("material.texture_specular", 1);
+        shader.setFloat("material.shininess", 32);
 
         std::get<Texture>(m_Diffuse).bind(0);
         if (m_HasSpecular)

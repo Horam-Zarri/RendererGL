@@ -14,6 +14,7 @@
 #include "model.hpp"
 #include "core/texture.hpp"
 #include "core/Framebuffer.hpp"
+#include "core/light.hpp"
 #include "skybox.hpp"
 #include "window.hpp"
 
@@ -26,9 +27,6 @@ Camera camera::CAMERA_STATE(glm::vec3(0.0f, 0.0f, 3.0f));
 
 EngineState g_Engine;
 EngineState ENGINE_STATE;
-
-static glm::mat4 view_transform;
-static glm::mat4 projection_transform;
 
 // if MSAA is enabled we draw to msaa_fbo then blit to offscr_fbo
 static std::unique_ptr<Framebuffer> msaa_fbo;
@@ -48,6 +46,8 @@ static std::unique_ptr<Shader> pp_shader;
 static std::unique_ptr<Shader> light_cube_shader;
 static std::unique_ptr<Shader> skybox_shader;
 
+static std::unique_ptr<DirectionalLight> dir_light;
+
 static std::unique_ptr<Model> jtp_model;
 static std::unique_ptr<Skybox> skybox_model;
 
@@ -64,10 +64,8 @@ void send_offscr_uniforms() {
                                                           ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE));
     offscr_shader->setVec3("viewPos", camera::g_Camera.Position);
 
-    offscr_shader->setVec3("light.direction", g_Engine.LIGHT_POS);
-    offscr_shader->setVec3("light.ambient", g_Engine.LIGHT_AMBIENT);
-    offscr_shader->setVec3("light.diffuse", g_Engine.LIGHT_DIFFUSE);
-    offscr_shader->setVec3("light.specular", g_Engine.LIGHT_SPECULAR);
+    // TODO: add changes
+    dir_light->sendUniforms(*offscr_shader);
 }
 
 void send_postprocess_uniforms() {
@@ -197,7 +195,7 @@ void render() {
     light_cube_shader->use();
 
     model = glm::mat4(1.0f);
-    model = glm::translate(model, g_Engine.LIGHT_POS);
+    model = glm::translate(model, g_Engine.LIGHT_DIR);
     model = glm::scale(model, glm::vec3(0.5f));
     light_cube_shader->setMat4("model", model);
     light_cube_shader->setMat4("view", view);
@@ -223,25 +221,6 @@ int init() {
     Shader shader_pp("./shaders/screen_PP_vs.glsl", "./shaders/screen_PP_fs.glsl");
     Shader shader_skb("./shaders/skybox_vs.glsl", "./shaders/skybox_fs.glsl");
 
-    //Model jtp_model("./assets/John_the_Baptist.obj");
-
-    shader_l.use();
-
-    shader_l.setInt("material.texture_diffuse1", 0);
-    shader_l.setInt("material.texture_specular1", 1);
-
-    shader_l.setVec3("light.direction", g_Engine.LIGHT_POS);
-    shader_l.setVec3("light.ambient", g_Engine.LIGHT_AMBIENT);
-    shader_l.setVec3("light.diffuse", g_Engine.LIGHT_DIFFUSE);
-    shader_l.setVec3("light.specular", g_Engine.LIGHT_SPECULAR);
-    shader_l.setFloat("material.shininess", 32);
-
-
-    shader_pp.use();
-
-    shaderLC_l.use();
-
-
     dir_light_cube = std::make_unique<Cube>();
 
     offscr_shader = std::make_unique<Shader>(shader_l);
@@ -251,6 +230,11 @@ int init() {
 
     std::unique_ptr<Model> p(new Model("./assets/backpack.obj"));
     jtp_model.swap(p);
+
+    dir_light = std::make_unique<DirectionalLight>
+        (g_Engine.LIGHT_DIR, g_Engine.LIGHT_AMBIENT, g_Engine.LIGHT_DIFFUSE, g_Engine.LIGHT_SPECULAR);
+
+    dir_light->sendUniforms(*offscr_shader);
 
     const std::string base = "./tex/skybox/";
     const std::array<std::string, 6> faces = {
@@ -284,14 +268,24 @@ void update_state() {
         g_Engine.OBJECT_POS = ENGINE_STATE.OBJECT_POS;
 
     // lighting
-    if (g_Engine.LIGHT_POS != ENGINE_STATE.LIGHT_POS)
-        g_Engine.LIGHT_POS = ENGINE_STATE.LIGHT_POS;
-    if (g_Engine.LIGHT_AMBIENT != ENGINE_STATE.LIGHT_AMBIENT)
+    if (g_Engine.LIGHT_DIR != ENGINE_STATE.LIGHT_DIR) {
+        g_Engine.LIGHT_DIR = ENGINE_STATE.LIGHT_DIR;
+        dir_light->setDirection(g_Engine.LIGHT_DIR);
+    }
+    if (g_Engine.LIGHT_AMBIENT != ENGINE_STATE.LIGHT_AMBIENT) {
         g_Engine.LIGHT_AMBIENT = ENGINE_STATE.LIGHT_AMBIENT;
-    if (g_Engine.LIGHT_DIFFUSE != ENGINE_STATE.LIGHT_DIFFUSE)
+        dir_light->setAmbient(g_Engine.LIGHT_AMBIENT);
+    }
+
+    if (g_Engine.LIGHT_DIFFUSE != ENGINE_STATE.LIGHT_DIFFUSE) {
         g_Engine.LIGHT_DIFFUSE = ENGINE_STATE.LIGHT_DIFFUSE;
-    if (g_Engine.LIGHT_SPECULAR != ENGINE_STATE.LIGHT_SPECULAR)
+        dir_light->setDiffuse(g_Engine.LIGHT_DIFFUSE);
+    }
+
+    if (g_Engine.LIGHT_SPECULAR != ENGINE_STATE.LIGHT_SPECULAR) {
         g_Engine.LIGHT_SPECULAR = ENGINE_STATE.LIGHT_SPECULAR;
+        dir_light->setSpecular(g_Engine.LIGHT_SPECULAR);
+    }
 
     // postprocess
     if (g_Engine.SHARPNESS_ENBL != ENGINE_STATE.SHARPNESS_ENBL)

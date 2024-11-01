@@ -160,9 +160,9 @@ void settings_panel() {
 
         ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.2f);
 
-        ImGui::DragFloat("X", &ENGINE_STATE.LIGHT_POS.x); ImGui::SameLine();
-        ImGui::DragFloat("Y", &ENGINE_STATE.LIGHT_POS.y); ImGui::SameLine();
-        ImGui::DragFloat("Z", &ENGINE_STATE.LIGHT_POS.z);
+        ImGui::DragFloat("X", &ENGINE_STATE.LIGHT_DIR.x); ImGui::SameLine();
+        ImGui::DragFloat("Y", &ENGINE_STATE.LIGHT_DIR.y); ImGui::SameLine();
+        ImGui::DragFloat("Z", &ENGINE_STATE.LIGHT_DIR.z);
 
         ImGui::PopItemWidth();
 
