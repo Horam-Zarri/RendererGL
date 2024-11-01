@@ -1,8 +1,8 @@
 #include <iostream>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-#include "window.hpp"
-#include "renderer.hpp"
+#include "Renderer/window.hpp"
+#include "Renderer/renderer.hpp"
 
 int main()
 {

@@ -2,9 +2,9 @@
 #define MATERIAL_H
 
 #include <glm/vec3.hpp>
-#include "core/texture.hpp"
+#include "Texture/texture.hpp"
 
-#include "shader.hpp"
+#include "Core/Shader/shader.hpp"
 #include <variant>
 
 class Material {

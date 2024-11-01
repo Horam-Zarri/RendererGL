@@ -1,8 +1,8 @@
 #ifndef FRAMEBUFFER_H
 #define FRAMEBUFFER_H
 
-#include "core/Renderbuffer.hpp"
-#include "core/texture.hpp"
+#include "Core/Renderbuffer.hpp"
+#include "Texture/texture.hpp"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 

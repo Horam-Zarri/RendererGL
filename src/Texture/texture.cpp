@@ -1,6 +1,6 @@
 #include "texture.hpp"
-#include "camera.hpp"
-#include "renderer.hpp"
+#include "Renderer/camera.hpp"
+#include "Renderer/renderer.hpp"
 
 Texture::Texture(): m_Dirty{true} {}
 

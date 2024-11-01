@@ -35,7 +35,7 @@ struct EngineState {
     unsigned int MSAA_MULTIPLIER;
 
     EngineState() {
-        LIGHT_DIR = glm::vec3(4.0f, 2.0f, 3.0f);
+        LIGHT_DIR = glm::vec3(-4.0f, -2.0f, -3.0f);
         LIGHT_AMBIENT = glm::vec3(0.1f);
         LIGHT_DIFFUSE = glm::vec3(0.5f);
         LIGHT_SPECULAR = glm::vec3(1.0f);

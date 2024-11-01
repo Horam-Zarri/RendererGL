@@ -2,10 +2,10 @@
 #define SKYBOX_H
 
 #include "camera.hpp"
-#include "core/VertexArray.hpp"
-#include "core/VertexBuffer.hpp"
-#include "core/cubemap.hpp"
-#include "shader.hpp"
+#include "Core/VertexArray.hpp"
+#include "Core/VertexBuffer.hpp"
+#include "Texture/cubemap.hpp"
+#include "Core/Shader/shader.hpp"
 
 
 class Skybox {

@@ -1,8 +1,8 @@
 #include "callbacks.hpp"
 #include "GLFW/glfw3.h"
-#include "camera.hpp"
-#include "renderer.hpp"
-#include "window.hpp"
+#include "Renderer/camera.hpp"
+#include "Renderer/renderer.hpp"
+#include "Renderer/window.hpp"
 #include <iostream>
 
 using renderer::camera::CAMERA_STATE;

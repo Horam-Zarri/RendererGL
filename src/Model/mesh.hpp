@@ -7,11 +7,11 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "core/IndexBuffer.hpp"
-#include "core/VertexArray.hpp"
-#include "core/material.hpp"
-#include "core/texture.hpp"
-#include "shader.hpp"
+#include "Core/IndexBuffer.hpp"
+#include "Core/VertexArray.hpp"
+#include "Lighting/material.hpp"
+#include "Texture/texture.hpp"
+#include "Core/Shader/shader.hpp"
 
 #include <string>
 #include <vector>

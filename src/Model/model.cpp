@@ -1,5 +1,5 @@
 #include "model.hpp"
-#include "core/material.hpp"
+#include "Lighting/material.hpp"
 
 #include <stb_image.h>
 

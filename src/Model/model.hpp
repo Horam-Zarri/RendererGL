@@ -9,10 +9,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <mesh.hpp>
-#include <shader.hpp>
-#include <core/texture.hpp>
-#include <core/material.hpp>
+#include "mesh.hpp"
+#include "Core/Shader/shader.hpp"
+#include "Texture/texture.hpp"
+#include "Lighting/material.hpp"
 
 #include <string>
 #include <iostream>

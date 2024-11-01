@@ -1,7 +1,7 @@
 #ifndef LIGHT_H
 #define LIGHT_H
 
-#include "shader.hpp"
+#include "Core/Shader/shader.hpp"
 #include <glm/vec3.hpp>
 #include <stdexcept>
 #include <vector>

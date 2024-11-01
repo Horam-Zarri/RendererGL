@@ -1,22 +1,27 @@
-
 #include "renderer.hpp"
-#include "GLFW/glfw3.h"
 #include "camera.hpp"
+
+#include "GLFW/glfw3.h"
+
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/trigonometric.hpp>
-#include "core/Renderbuffer.hpp"
-#include "cube.hpp"
-#include "quad.hpp"
-#include "shader.hpp"
 #include <glm/vec3.hpp>
-#include <memory>
-#include <stb_image.h>
-#include "model.hpp"
-#include "core/texture.hpp"
-#include "core/Framebuffer.hpp"
-#include "core/light.hpp"
+
+#include "Core/Framebuffer.hpp"
+#include "Core/Renderbuffer.hpp"
+#include "Core/Shader/shader.hpp"
+#include "Core/Shapes/cube.hpp"
+#include "Core/Shapes/quad.hpp"
+
+#include "Model/model.hpp"
+#include "Texture/texture.hpp"
+#include "Lighting/light.hpp"
+
 #include "skybox.hpp"
 #include "window.hpp"
+
+#include <memory>
+#include <stb_image.h>
 
 namespace renderer {
 
@@ -187,22 +192,22 @@ void render() {
 
     pp_shader->use();
     postprocess_pass();
-    glm::mat4 model(1.0f);
-    glm::mat4 view = camera::g_Camera.GetViewMatrix();
-    glm::mat4 projection = glm::perspective(glm::radians(camera::g_Camera.Zoom), (float)800 / 600, 0.1f, 100.0f);
+
+    //glm::mat4 model(1.0f);
+    //glm::mat4 view = camera::g_Camera.GetViewMatrix();
+    //glm::mat4 projection = glm::perspective(glm::radians(camera::g_Camera.Zoom), (float)800 / 600, 0.1f, 100.0f);
 
 
-    light_cube_shader->use();
+    //light_cube_shader->use();
 
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, g_Engine.LIGHT_DIR);
-    model = glm::scale(model, glm::vec3(0.5f));
-    light_cube_shader->setMat4("model", model);
-    light_cube_shader->setMat4("view", view);
-    light_cube_shader->setMat4("projection", projection);
+    //model = glm::mat4(1.0f);
+    //model = glm::translate(model, g_Engine.LIGHT_DIR);
+    //model = glm::scale(model, glm::vec3(0.5f));
+    //light_cube_shader->setMat4("model", model);
+    //light_cube_shader->setMat4("view", view);
+    //light_cube_shader->setMat4("projection", projection);
 
 
-    dir_light_cube->Draw();
 }
 
 int init() {

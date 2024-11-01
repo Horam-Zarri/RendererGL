@@ -1,7 +1,7 @@
 #ifndef RENDERBUFFER_H
 #define RENDERBUFFER_H
 
-#include "renderer.hpp"
+#include "Renderer/renderer.hpp"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 

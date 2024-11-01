@@ -52,6 +52,7 @@ add_subdirectory(3rdParty/assimp assimp EXCLUDE_FROM_ALL)
 file (GLOB SOURCES
     src/*.cpp
     src/*/*.cpp
+    src/*/*/*.cpp
     ${IMGUI_DIR}/*.cpp
     ${IMGUI_DIR}/backends/*.cpp
     ${GLAD_DIR}/src/glad.c
