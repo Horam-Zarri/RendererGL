@@ -5,6 +5,7 @@
 #include <format>
 #include <glm/vec3.hpp>
 #include <stdexcept>
+#include <string>
 #include <vector>
 #include <iostream>
 
@@ -92,7 +93,7 @@ protected:
         auto it = attenuation_table.cbegin();
         auto end = attenuation_table.cend();
 
-        while (it != end) {
+        for (; it != end; ++it) {
             unsigned int bd = it->first;
             if (bd >= distance) {
                 near = it->second;
@@ -104,6 +105,7 @@ protected:
                     far = near;
 
                 delta = ((float)(distance - bd)) / (ed - bd);
+                std::cout << "DISTANCE " << distance << " BD " << bd << " ED" << ed << std::endl;
                 break;
             }
         }
@@ -169,13 +171,22 @@ public:
         }
 
         attenuation = dist_to_atten(distance);
+
+        std::cout << "CALCULATED_ATTENUATION" << attenuation.linear << " " <<
+            attenuation.quadratic << std::endl;
     }
 
-    void sendUniforms(Shader& shader, int slot = 0) const {
-        shader.setVec3("directionalLight.direction", position);
-        shader.setVec3("directionalLight.ambient", ambient);
-        shader.setVec3("directionalLight.diffuse", diffuse);
-        shader.setVec3("directionalLight.specular", specular);
+    void sendUniforms(Shader& shader, int slot) const {
+        std::string ubase = "pointLights[" + std::to_string(slot) + "]";
+
+        shader.setVec3(ubase + ".position", position);
+        shader.setVec3(ubase + ".ambient", ambient);
+        shader.setVec3(ubase + ".diffuse", diffuse);
+        shader.setVec3(ubase + ".specular", specular);
+
+        shader.setFloat(ubase + ".constant", attenuation.constant);
+        shader.setFloat(ubase + ".linear", attenuation.linear);
+        shader.setFloat(ubase + ".quadratic", attenuation.quadratic);
     }
 };
 

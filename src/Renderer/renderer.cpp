@@ -3,6 +3,7 @@
 
 #include "GLFW/glfw3.h"
 
+#include <array>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/trigonometric.hpp>
 #include <glm/vec3.hpp>
@@ -52,7 +53,7 @@ static std::unique_ptr<Shader> light_cube_shader;
 static std::unique_ptr<Shader> skybox_shader;
 
 static std::unique_ptr<DirectionalLight> dir_light;
-static std::unique_ptr<PointLight> point_light;
+static std::array<std::unique_ptr<PointLight>, NR_MAX_POINT_LIGHTS> point_lights;
 
 static std::unique_ptr<Model> jtp_model;
 static std::unique_ptr<Skybox> skybox_model;
@@ -241,11 +242,6 @@ int init() {
         (g_Engine.LIGHT_DIR, g_Engine.LIGHT_AMBIENT, g_Engine.LIGHT_DIFFUSE, g_Engine.LIGHT_SPECULAR);
 
     dir_light->sendUniforms(*offscr_shader);
-
-    point_light = std::make_unique<PointLight>
-        (glm::vec3(2.0, 1.0, 2.0), 7, glm::vec3(1.0, 1.0, 1.0));
-
-    point_light->sendUniforms(*offscr_shader);
 
     const std::string base = "./tex/skybox/";
     const std::array<std::string, 6> faces = {

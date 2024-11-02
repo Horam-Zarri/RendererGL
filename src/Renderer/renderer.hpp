@@ -64,6 +64,7 @@ struct EngineState {
 
         MSAA_ENBL = true;
         MSAA_MULTIPLIER = 4;
+
     }
 };
 
@@ -76,12 +77,12 @@ extern EngineState ENGINE_STATE;
 extern EngineState g_Engine;
 
 constexpr static float ASPECT_RATIO = 16.0 / 9.0;
+constexpr static unsigned int NR_MAX_POINT_LIGHTS = 10;
 
 int init();
 void update_state();
 void render();
 void terminate();
-
 
 }
 
