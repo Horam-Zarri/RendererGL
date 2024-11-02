@@ -4,8 +4,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "core/VertexBuffer.hpp"
-#include "core/VertexArray.hpp"
+#include "Core/VertexBuffer.hpp"
+#include "Core/VertexArray.hpp"
 
 static constexpr float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
     // positions   // texCoords

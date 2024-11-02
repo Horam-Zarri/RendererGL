@@ -2,6 +2,7 @@
 #define LIGHT_H
 
 #include "Core/Shader/shader.hpp"
+#include <format>
 #include <glm/vec3.hpp>
 #include <stdexcept>
 #include <vector>
@@ -168,6 +169,13 @@ public:
         }
 
         attenuation = dist_to_atten(distance);
+    }
+
+    void sendUniforms(Shader& shader, int slot = 0) const {
+        shader.setVec3("directionalLight.direction", position);
+        shader.setVec3("directionalLight.ambient", ambient);
+        shader.setVec3("directionalLight.diffuse", diffuse);
+        shader.setVec3("directionalLight.specular", specular);
     }
 };
 

@@ -6,8 +6,6 @@
 #include <unordered_map>
 #include <utility>
 
-float x = 50;
-
 void settings_panel() {
 
 
@@ -169,6 +167,12 @@ void settings_panel() {
         ImGui::DragFloat3("Ambient", &ENGINE_STATE.LIGHT_AMBIENT.x, .05f, 0.0f, 1.0f);
         ImGui::DragFloat3("Diffuse", &ENGINE_STATE.LIGHT_DIFFUSE.x, .05f, 0.0f, 1.0f);
         ImGui::DragFloat3("Specular", &ENGINE_STATE.LIGHT_SPECULAR.x, .05f, 0.0f, 1.0f);
+
+        ImGui::SeparatorText("Point Lights");
+
+        ImGui::Button("Add point light");
+
+
 
 
         ImGui::SeparatorText("Postprocessing");

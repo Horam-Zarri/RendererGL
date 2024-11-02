@@ -1,8 +1,8 @@
 #ifndef CUBE_H
 #define CUBE_H
 
-#include "core/VertexBuffer.hpp"
-#include "core/VertexArray.hpp"
+#include "Core/VertexBuffer.hpp"
+#include "Core/VertexArray.hpp"
 
 static constexpr float cubeVertices[] = {
     -0.5f, -0.5f, -0.5f,

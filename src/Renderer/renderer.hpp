@@ -7,6 +7,7 @@
 namespace renderer
 {
 struct EngineState {
+
     glm::vec3 LIGHT_DIR;
     glm::vec3 LIGHT_AMBIENT;
     glm::vec3 LIGHT_DIFFUSE;
