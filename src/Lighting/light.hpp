@@ -93,19 +93,17 @@ protected:
         auto it = attenuation_table.cbegin();
         auto end = attenuation_table.cend();
 
-        for (; it != end; ++it) {
-            unsigned int bd = it->first;
-            if (bd >= distance) {
-                near = it->second;
-                it++;
-                unsigned int ed = it->first;
-                if (it != end)
-                    far = it->second;
-                else
-                    far = near;
+        while (++it != end) {
+            unsigned int ed = it->first;
+            if (ed >= distance) {
+                far = it->second;
+
+                unsigned int bd = (--it)->first;
+                near = it++->second;
 
                 delta = ((float)(distance - bd)) / (ed - bd);
-                std::cout << "DISTANCE " << distance << " BD " << bd << " ED" << ed << std::endl;
+                std::cout << "DISTANCE " << distance << " BD " << ed << " ED" << bd << std::endl;
+                std::cout << "DELTA " << delta << std::endl;
                 break;
             }
         }

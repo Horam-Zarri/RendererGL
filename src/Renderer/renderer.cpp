@@ -71,6 +71,8 @@ void send_offscr_uniforms() {
                                                           ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE));
     offscr_shader->setVec3("viewPos", camera::g_Camera.Position);
 
+    offscr_shader->setBool("blinn", g_Engine.BLINN_ENBL);
+
     // lights
     dir_light->sendUniforms(*offscr_shader);
 
@@ -120,7 +122,7 @@ void offscr_pass() {
     for (unsigned int i = 0; i < point_lights.size(); i++) {
         glm::mat4 md(1.0f);
         md = glm::translate(md, point_lights[i]->getPosition());
-        md = glm::scale(md, glm::vec3(1.0));
+        md = glm::scale(md, glm::vec3(0.5));
         light_cube_shader->setMat4("model", md);
         light_cube_shader->setMat4("view", camera::g_Camera.GetViewMatrix());
         light_cube_shader->setMat4("projection", glm::perspective(glm::radians(camera::g_Camera.Zoom),
@@ -320,6 +322,9 @@ void update_state() {
         dir_light->setSpecular(g_Engine.LIGHT_SPECULAR);
     }
 
+    if (g_Engine.BLINN_ENBL != ENGINE_STATE.BLINN_ENBL)
+        g_Engine.BLINN_ENBL = ENGINE_STATE.BLINN_ENBL;
+
     // postprocess
     if (g_Engine.SHARPNESS_ENBL != ENGINE_STATE.SHARPNESS_ENBL)
         g_Engine.SHARPNESS_ENBL = ENGINE_STATE.SHARPNESS_ENBL;
@@ -376,10 +381,11 @@ void update_state() {
 void addPointLight() {
     constexpr glm::vec3 initial_pos(2.0, 2.0, 5.0);
     constexpr glm::vec3 initial_color(1.0);
-    constexpr unsigned int initial_distance = 1000;
+    constexpr unsigned int initial_distance = 13;
 
-    point_lights.push_back(std::make_shared<PointLight>
-                           (initial_pos, initial_distance, initial_color));
+    if (point_lights.size() < renderer::NR_MAX_POINT_LIGHTS)
+        point_lights.push_back(std::make_shared<PointLight>
+                               (initial_pos, initial_distance, initial_color));
 }
 
 void removePointLight(int index) {
