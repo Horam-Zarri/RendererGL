@@ -176,6 +176,49 @@ public:
             attenuation.quadratic << std::endl;
     }
 
+    inline const glm::vec3& getPosition() const {
+        return position;
+    }
+
+    inline const glm::vec3& getAmbient() const {
+        return ambient;
+    }
+
+    inline const glm::vec3& getDiffuse() const {
+        return diffuse;
+    }
+
+    inline const glm::vec3& getSpecular() const {
+        return specular;
+    }
+
+    inline const Attenuation& getAttenuation() const {
+        return attenuation;
+    }
+    inline void setPosition(const glm::vec3& position) {
+        this->position = position;
+    }
+
+    inline void setAttenuation(const Attenuation attenuation) {
+        this->attenuation = attenuation;
+    }
+
+    inline void setDistance(const unsigned int distance) {
+        this->attenuation = dist_to_atten(distance);
+    }
+
+    inline void setAmbient(const glm::vec3& ambient) {
+        this->ambient = ambient;
+    }
+
+    inline void setDiffuse(const glm::vec3& diffuse) {
+        this->diffuse = diffuse;
+    }
+
+    inline void setSpecular(const glm::vec3& specular) {
+        this->specular = specular;
+    }
+
     void sendUniforms(Shader& shader, int slot) const {
         std::string ubase = "pointLights[" + std::to_string(slot) + "]";
 

@@ -1,6 +1,7 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#include "Lighting/light.hpp"
 #include "camera.hpp"
 #include <cstdint>
 
@@ -83,6 +84,10 @@ int init();
 void update_state();
 void render();
 void terminate();
+
+void addPointLight();
+void removePointLight(int index);
+std::shared_ptr<PointLight> getPointLight(int index);
 
 }
 

@@ -170,7 +170,52 @@ void settings_panel() {
 
         ImGui::SeparatorText("Point Lights");
 
-        ImGui::Button("Add point light");
+        if (ImGui::Button("Add point light")) {
+            renderer::addPointLight();
+        }
+
+        ImGui::Spacing();
+
+        // TODO: eh?
+        for (unsigned int i = 0; i < renderer::NR_MAX_POINT_LIGHTS; i++) {
+            auto pl = renderer::getPointLight(i);
+
+            if (pl == nullptr) {
+                break;
+            }
+
+            ImGui::PushID(i);
+
+            ImGui::Text("Point Light - %d", i);
+            ImGui::SameLine();
+            if (ImGui::Button("Remove")) {
+                renderer::removePointLight(i);
+            }
+
+            auto pl_pos = pl->getPosition();
+            auto pl_ambient = pl->getAmbient();
+            auto pl_diffuse = pl->getDiffuse();
+            auto pl_specular = pl->getSpecular();
+            auto pl_atten = pl->getAttenuation();
+
+            if (ImGui::DragFloat3("Position", &pl_pos.x)) { pl->setPosition(pl_pos); }
+
+            if (ImGui::DragFloat3("Ambient", &pl_ambient.x)) { pl->setAmbient(pl_ambient); }
+            if (ImGui::DragFloat3("Diffuse", &pl_diffuse.x)) { pl->setDiffuse(pl_diffuse); }
+            if (ImGui::DragFloat3("Specular", &pl_specular.x)) { pl->setSpecular(pl_specular); }
+
+            ImGui::Spacing();
+            ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.2);
+
+            if (ImGui::DragFloat("Constant", &pl_atten.constant)) { pl->setAttenuation(pl_atten); }
+            ImGui::SameLine();
+            if (ImGui::DragFloat("Linear", &pl_atten.linear)) { pl->setAttenuation(pl_atten); }
+            if (ImGui::DragFloat("Quadratic", &pl_atten.quadratic)) { pl->setAttenuation(pl_atten); }
+
+            ImGui::PopItemWidth();
+
+            ImGui::PopID();
+        }
 
 
 

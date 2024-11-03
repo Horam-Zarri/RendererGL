@@ -45,7 +45,6 @@ static std::unique_ptr<Renderbuffer> offscr_rbo;
 static Texture offscr_tex;
 
 static std::unique_ptr<Quad> screen_quad;
-static std::unique_ptr<Cube> dir_light_cube;
 
 static std::unique_ptr<Shader> offscr_shader;
 static std::unique_ptr<Shader> pp_shader;
@@ -53,7 +52,8 @@ static std::unique_ptr<Shader> light_cube_shader;
 static std::unique_ptr<Shader> skybox_shader;
 
 static std::unique_ptr<DirectionalLight> dir_light;
-static std::array<std::unique_ptr<PointLight>, NR_MAX_POINT_LIGHTS> point_lights;
+static std::vector<std::shared_ptr<PointLight>> point_lights;
+static std::unique_ptr<Cube> point_lights_cube;
 
 static std::unique_ptr<Model> jtp_model;
 static std::unique_ptr<Skybox> skybox_model;
@@ -71,8 +71,14 @@ void send_offscr_uniforms() {
                                                           ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE));
     offscr_shader->setVec3("viewPos", camera::g_Camera.Position);
 
-    // TODO: add changes
+    // lights
     dir_light->sendUniforms(*offscr_shader);
+
+    offscr_shader->setInt("pointLightsSize", point_lights.size());
+    for (unsigned int i = 0; i < point_lights.size(); i++) {
+        point_lights[i]->sendUniforms(*offscr_shader, i);
+    }
+
 }
 
 void send_postprocess_uniforms() {
@@ -90,6 +96,7 @@ void send_postprocess_uniforms() {
 void offscr_pass() {
     glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
+    // Draw Models
     offscr_shader->use();
     send_offscr_uniforms();
 
@@ -107,10 +114,25 @@ void offscr_pass() {
     jtp_model->Draw(*offscr_shader);
     skybox_model->Draw(*skybox_shader, camera::g_Camera);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // Draw Lights
+
+    light_cube_shader->use();
+    for (unsigned int i = 0; i < point_lights.size(); i++) {
+        glm::mat4 md(1.0f);
+        md = glm::translate(md, point_lights[i]->getPosition());
+        md = glm::scale(md, glm::vec3(1.0));
+        light_cube_shader->setMat4("model", md);
+        light_cube_shader->setMat4("view", camera::g_Camera.GetViewMatrix());
+        light_cube_shader->setMat4("projection", glm::perspective(glm::radians(camera::g_Camera.Zoom),
+                                                                  ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE));
+        point_lights_cube->Draw();
+
+    }
 
     if (g_Engine.MSAA_ENBL)
         msaa_fbo->blitTo(*offscr_fbo, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 
@@ -228,7 +250,6 @@ int init() {
     Shader shader_pp("./shaders/screen_PP_vs.glsl", "./shaders/screen_PP_fs.glsl");
     Shader shader_skb("./shaders/skybox_vs.glsl", "./shaders/skybox_fs.glsl");
 
-    dir_light_cube = std::make_unique<Cube>();
 
     offscr_shader = std::make_unique<Shader>(shader_l);
     light_cube_shader = std::make_unique<Shader>(shaderLC_l);
@@ -242,6 +263,11 @@ int init() {
         (g_Engine.LIGHT_DIR, g_Engine.LIGHT_AMBIENT, g_Engine.LIGHT_DIFFUSE, g_Engine.LIGHT_SPECULAR);
 
     dir_light->sendUniforms(*offscr_shader);
+
+    point_lights_cube = std::make_unique<Cube>();
+
+    // TODO: this is very ugly
+    offscr_shader->setInt("pointLightsSize", 0);
 
     const std::string base = "./tex/skybox/";
     const std::array<std::string, 6> faces = {
@@ -345,5 +371,27 @@ void update_state() {
 
     ENGINE_STATE = g_Engine;
 }
+
+
+void addPointLight() {
+    constexpr glm::vec3 initial_pos(2.0, 2.0, 5.0);
+    constexpr glm::vec3 initial_color(1.0);
+    constexpr unsigned int initial_distance = 1000;
+
+    point_lights.push_back(std::make_shared<PointLight>
+                           (initial_pos, initial_distance, initial_color));
+}
+
+void removePointLight(int index) {
+    point_lights.erase(point_lights.begin() + index);
+}
+
+std::shared_ptr<PointLight> getPointLight(int index) {
+    return
+    index < point_lights.size() ?
+    point_lights[index] :
+    nullptr;
+}
+
 void terminate() {}
 }
