@@ -1,6 +1,7 @@
 #include "gui.hpp"
 #include "imgui.h"
 #include "renderer.hpp"
+#include <cmath>
 #include <iostream>
 #include <string>
 #include <unordered_map>
@@ -212,7 +213,8 @@ void settings_panel() {
             "MSAA x8",
         };
 
-        static int aa_state = 2;
+        // not elegant, yet so robust
+        int aa_state = ENGINE_STATE.MSAA_ENBL ? std::log2(ENGINE_STATE.MSAA_MULTIPLIER): 0;
 
         if (ImGui::Combo(
             "Antialiasing",
@@ -220,7 +222,6 @@ void settings_panel() {
             antialiasing_options,
             IM_ARRAYSIZE(antialiasing_options)
         )) {
-            // not elegant, yet so robust
             ENGINE_STATE.MSAA_ENBL = aa_state == 0 ? false : true;
             ENGINE_STATE.MSAA_MULTIPLIER = std::pow(2, aa_state);
         }

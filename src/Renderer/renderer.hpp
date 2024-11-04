@@ -67,7 +67,13 @@ struct EngineState {
         RENDER_WIDTH = SCREEN_WIDTH = 1280;
         RENDER_HEIGHT = SCREEN_HEIGHT = 720;
 
-        MSAA_ENBL = false;
+        // Apple has problems with MSAA
+        #ifdef __APPLE__
+            MSAA_ENBL = false;
+        #else
+            MSAA_ENBL = true;
+        #endif
+
         MSAA_MULTIPLIER = 4;
 
     }

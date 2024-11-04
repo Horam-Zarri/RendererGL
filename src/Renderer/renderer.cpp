@@ -1,4 +1,5 @@
 #include "renderer.hpp"
+#include "Texture/multisampletexture.hpp"
 #include "camera.hpp"
 
 #include "GLFW/glfw3.h"
@@ -37,7 +38,7 @@ EngineState ENGINE_STATE;
 // if MSAA is enabled we draw to msaa_fbo then blit to offscr_fbo
 static std::unique_ptr<Framebuffer> msaa_fbo;
 static std::unique_ptr<Renderbuffer> msaa_rbo;
-static Texture msaa_tex;
+static MultisampleTexture msaa_tex;
 
 // if MSAA is disabled we draw directly to offscr_fbo
 static std::unique_ptr<Framebuffer> offscr_fbo;
@@ -161,6 +162,11 @@ void setup_offscr_pass() {
     offscr_fbo->attachTexture(GL_COLOR_ATTACHMENT0, offscr_tex);
     offscr_fbo->attachRenderBuffer(GL_DEPTH_STENCIL_ATTACHMENT, *offscr_rbo);
 
+    offscr_fbo->bind();
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Offscr Framebuffer is not complete!" <<
+            std::endl;
+
     msaa_fbo = std::make_unique<Framebuffer>();
 
     msaa_tex.init();
@@ -176,8 +182,9 @@ void setup_offscr_pass() {
     msaa_fbo->attachTexture(GL_COLOR_ATTACHMENT0, msaa_tex);
     msaa_fbo->attachRenderBuffer(GL_DEPTH_STENCIL_ATTACHMENT, *msaa_rbo);
 
+    msaa_fbo->bind();
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" <<
+        std::cout << "ERROR::FRAMEBUFFER:: MSAA Framebuffer is not complete!" <<
             std::endl;
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

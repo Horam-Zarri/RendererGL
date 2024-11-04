@@ -52,13 +52,14 @@ static inline GLenum get_color_format(int number_of_channels) {
 
 class Texture {
 private:
-    unsigned int m_TextureID;
     unsigned int m_Width, m_Height;
-
     bool m_Dirty;
 
+protected:
+    unsigned int m_TextureID;
     // this is quite not a "pristine" kind of initialization handling
     void handle_dirty();
+
 public:
     std::string m_Path;
     TextureType m_Type;
@@ -66,14 +67,15 @@ public:
     Texture();
 
     void init();
-    void gen_color_buffer(unsigned int width, unsigned int height, bool multisample = false);
-    void gen_depth_stencil_buffer(unsigned int width, unsigned int height);
+    virtual void gen_color_buffer(unsigned int width, unsigned int height);
+    virtual void gen_depth_stencil_buffer(unsigned int width, unsigned int height);
 
-    void resize(unsigned int width, unsigned height);
+    virtual void resize(unsigned int width, unsigned height);
 
     void load_file(const std::string& path, TextureConfig tex_conf = TextureConfig());
-    void bind();
-    void bind(unsigned int slot);
+
+    void bind() const;
+    void bind(unsigned int slot) const;
 
     inline unsigned int id() const {
         return m_TextureID;

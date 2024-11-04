@@ -1,4 +1,5 @@
 #include "texture.hpp"
+#include "Core/Shader/shader.hpp"
 #include "Renderer/camera.hpp"
 #include "Renderer/renderer.hpp"
 
@@ -6,7 +7,6 @@ Texture::Texture(): m_Dirty{true} {}
 
 void Texture::init() {
     glGenTextures(1, &m_TextureID);
-    glBindTexture(GL_TEXTURE_2D, m_TextureID);
     m_Dirty = false;
 }
 
@@ -18,27 +18,16 @@ void Texture::handle_dirty() {
     }
 }
 
-void Texture::gen_color_buffer(unsigned int width, unsigned int height, bool multisample) {
+void Texture::gen_color_buffer(unsigned int width, unsigned int height) {
     handle_dirty();
 
-    m_Type = multisample ? TextureType::COLOR_ATTACH_MULTISAMPLE :
-            TextureType::COLOR_ATTACH;
+    m_Type = TextureType::COLOR_ATTACH;
 
     glBindTexture(GL_TEXTURE_2D, m_TextureID);
 
-    if (multisample)
-        glTexImage2DMultisample(
-            GL_TEXTURE_2D_MULTISAMPLE,
-            renderer::g_Engine.MSAA_MULTIPLIER,
-            GL_RGB,
-            width,
-            height,
-            GL_TRUE
-        );
-    else
-        glTexImage2D(
-            GL_TEXTURE_2D, 0, GL_RGB, width, height,
-            0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(
+        GL_TEXTURE_2D, 0, GL_RGB, width, height,
+        0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -63,13 +52,8 @@ void Texture::resize(unsigned int width, unsigned int height) {
     // somewhat straightforward solution for now
     switch(m_Type) {
         case TextureType::COLOR_ATTACH:
-            gen_color_buffer(width, height, false);
+            gen_color_buffer(width, height);
             break;
-
-        case TextureType::COLOR_ATTACH_MULTISAMPLE:
-            gen_color_buffer(width, height, true);
-            break;
-
         case TextureType::DEPTH_STENCIL_ATTACH:
             gen_depth_stencil_buffer(width, height);
             break;
@@ -78,6 +62,7 @@ void Texture::resize(unsigned int width, unsigned int height) {
             break;
     }
 }
+
 void Texture::load_file(const std::string& path, TextureConfig tex_conf) {
     handle_dirty();
 
@@ -115,11 +100,11 @@ void Texture::load_file(const std::string& path, TextureConfig tex_conf) {
     }
 }
 
-void Texture::bind() {
+void Texture::bind() const {
     glBindTexture(GL_TEXTURE_2D, m_TextureID);
 }
 
-void Texture::bind(unsigned int slot) {
+void Texture::bind(unsigned int slot) const {
     glActiveTexture(GL_TEXTURE0 + slot);
     glBindTexture(GL_TEXTURE_2D, m_TextureID);
 }
