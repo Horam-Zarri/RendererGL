@@ -1,8 +1,6 @@
 #include "window.hpp"
 #include "Util/callbacks.hpp"
 
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 #include <iostream>
 
 
@@ -17,6 +15,7 @@ int window::init()
 
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
 #endif
 
     // glfw window creation

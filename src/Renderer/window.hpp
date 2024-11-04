@@ -1,6 +1,8 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include "gui.hpp"
 namespace window
 {
@@ -21,7 +23,6 @@ void handle_input();
 void render_gui();
 void swap_and_poll();
 void terminate();
-
 }
 
 #endif

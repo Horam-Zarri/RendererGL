@@ -63,7 +63,7 @@ static std::unique_ptr<Skybox> skybox_model;
 void send_offscr_uniforms() {
     glm::mat4 md = glm::mat4(1.0f);
     md = glm::translate(md, g_Engine.OBJECT_POS);
-    md = glm::scale(md, glm::vec3(1.0));
+    md = glm::scale(md, glm::vec3(0.01));
     md = glm::rotate(md, glm::radians(0.0f), glm::vec3(1.0, 0.0, 0.0));
     offscr_shader->setMat4("model", md);
     offscr_shader->setMat4("view", camera::g_Camera.GetViewMatrix());
@@ -118,6 +118,9 @@ void offscr_pass() {
 
     // Draw Lights
 
+    // light cubes should be always visible
+    glDisable(GL_DEPTH_TEST);
+
     light_cube_shader->use();
     for (unsigned int i = 0; i < point_lights.size(); i++) {
         glm::mat4 md(1.0f);
@@ -130,6 +133,8 @@ void offscr_pass() {
         point_lights_cube->Draw();
 
     }
+
+    glEnable(GL_DEPTH_TEST);
 
     if (g_Engine.MSAA_ENBL)
         msaa_fbo->blitTo(*offscr_fbo, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
@@ -258,7 +263,7 @@ int init() {
     pp_shader = std::make_unique<Shader>(shader_pp);
     skybox_shader = std::make_unique<Shader>(shader_skb);
 
-    std::unique_ptr<Model> p(new Model("./assets/backpack.obj"));
+    std::unique_ptr<Model> p(new Model("./assets/Sponza/glTF/Sponza.gltf"));
     jtp_model.swap(p);
 
     dir_light = std::make_unique<DirectionalLight>

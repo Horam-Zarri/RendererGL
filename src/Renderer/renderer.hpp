@@ -67,7 +67,7 @@ struct EngineState {
         RENDER_WIDTH = SCREEN_WIDTH = 1280;
         RENDER_HEIGHT = SCREEN_HEIGHT = 720;
 
-        MSAA_ENBL = true;
+        MSAA_ENBL = false;
         MSAA_MULTIPLIER = 4;
 
     }
