@@ -127,17 +127,17 @@ void settings_panel() {
 
             if (ImGui::DragFloat3("Position", &pl_pos.x)) { pl->setPosition(pl_pos); }
 
-            if (ImGui::DragFloat3("Ambient", &pl_ambient.x)) { pl->setAmbient(pl_ambient); }
-            if (ImGui::DragFloat3("Diffuse", &pl_diffuse.x)) { pl->setDiffuse(pl_diffuse); }
-            if (ImGui::DragFloat3("Specular", &pl_specular.x)) { pl->setSpecular(pl_specular); }
+            if (ImGui::DragFloat3("Ambient", &pl_ambient.x, .05f, 0.0f, 1.0f)) { pl->setAmbient(pl_ambient); }
+            if (ImGui::DragFloat3("Diffuse", &pl_diffuse.x, .05f, 0.0f, 1.0f)) { pl->setDiffuse(pl_diffuse); }
+            if (ImGui::DragFloat3("Specular", &pl_specular.x, .05f, 0.0f, 1.0f)) { pl->setSpecular(pl_specular); }
 
             ImGui::Spacing();
             ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.2);
 
-            if (ImGui::DragFloat("Constant", &pl_atten.constant)) { pl->setAttenuation(pl_atten); }
+            if (ImGui::DragFloat("Constant", &pl_atten.constant, .01f, 1.0)) { pl->setAttenuation(pl_atten); }
             ImGui::SameLine();
-            if (ImGui::DragFloat("Linear", &pl_atten.linear)) { pl->setAttenuation(pl_atten); }
-            if (ImGui::DragFloat("Quadratic", &pl_atten.quadratic)) { pl->setAttenuation(pl_atten); }
+            if (ImGui::DragFloat("Linear", &pl_atten.linear, .01f, 0.0)) { pl->setAttenuation(pl_atten); }
+            if (ImGui::DragFloat("Quadratic", &pl_atten.quadratic, .01, 0.0)) { pl->setAttenuation(pl_atten); }
 
             ImGui::PopItemWidth();
 

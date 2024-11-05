@@ -11,6 +11,8 @@ uniform float sharpness;
 uniform bool blur;
 uniform bool grayscale;
 
+uniform bool gamma;
+
 const float offset = 1.0 / 600.0;
 
 vec2 offsets[9] = vec2[](
@@ -70,13 +72,14 @@ vec3 process_blur() {
 
 void main()
 {
+    vec3 color;
+
     if (sharpen) {
-        FragColor = vec4(process_sharpness(), 1.0);
+        color = process_sharpness();
     } else if (blur) {
-        FragColor = vec4(process_blur(), 1.0);
+        color = process_blur();
     } else {
-        vec3 col = texture(screenTexture, TexCoords).rgb;
-        FragColor = vec4(col, 1.0);
+        color = texture(screenTexture, TexCoords).rgb;
 
         if (grayscale) {
             const float r_weight = 0.2126;
@@ -86,7 +89,12 @@ void main()
             float avg = r_weight * FragColor.r + g_weight * FragColor.g
                 + b_weight * FragColor.b;
 
-            FragColor = vec4(avg, avg, avg, 1.0);
+            color = vec3(avg, avg, avg);
         }
     }
+
+    if (!gamma)
+        color = pow(color, vec3(1.0/2.2));
+
+    FragColor = vec4(color, 1.0);
 }

@@ -76,15 +76,19 @@ void Texture::load_file(const std::string& path, TextureConfig tex_conf) {
     unsigned char *data = stbi_load(path.c_str(), (int*)&m_Width, (int*)&m_Height, &nrComponents, 0);
     if (data)
     {
-        GLenum format_internal = tex_conf.format_internal;
-        GLenum format = tex_conf.format;
+        GLenum internal_format = tex_conf.internal_format;
+        GLenum data_format = tex_conf.data_format;
 
-        if (format == -1)
-            format = format_internal = get_color_format(nrComponents);
+        // sentinel value for unspecified
+        if (data_format == -1) {
+            internal_format = get_internal_format(nrComponents, tex_conf.gamma_correction);
+            data_format = get_data_format(nrComponents);
+        }
+
 
         glBindTexture(GL_TEXTURE_2D, m_TextureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format_internal, m_Width, m_Height,
-                     0, format, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, internal_format, m_Width, m_Height,
+                     0, data_format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, tex_conf.wrap_s);

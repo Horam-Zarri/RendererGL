@@ -14,10 +14,28 @@ enum class TextureType {
     DEPTH_STENCIL_ATTACH
 };
 
+static inline GLenum get_internal_format(int nrComponents, bool gamma_correction) {
+    switch (nrComponents) {
+        case 1: return GL_RED;
+        case 2: return GL_RG;
+        case 3: return gamma_correction ? GL_SRGB : GL_RGB;
+        case 4: return gamma_correction ? GL_SRGB_ALPHA : GL_RGBA;
+    }
+}
+
+static inline GLenum get_data_format(int nrComponents) {
+    switch (nrComponents) {
+        case 1: return GL_RED;
+        case 2: return GL_RG;
+        case 3: return GL_RGB;
+        case 4: return GL_RGBA;
+    }
+}
+
 struct TextureConfig {
     GLint level;
-    GLint format_internal;
-    GLint format;
+    GLint internal_format;
+    GLint data_format;
 
     int mag_filter;
     int min_filter;
@@ -25,30 +43,23 @@ struct TextureConfig {
     int wrap_s;
     int wrap_r;
 
+    bool gamma_correction;
+
     TextureConfig() {
         level = 0;
 
         // sentinel to state manual format detection
-        format = format_internal = -1;
+        data_format = internal_format = -1;
 
         mag_filter = GL_LINEAR;
         min_filter = GL_LINEAR_MIPMAP_LINEAR;
 
         wrap_t = wrap_s = wrap_r = GL_REPEAT;
+
+        gamma_correction = true;
     }
 };
 
-static inline GLenum get_color_format(int number_of_channels) {
-    switch(number_of_channels) {
-        case 1: return GL_RED;
-        case 2: return GL_RG;
-        case 3: return GL_RGB;
-        case 4: return GL_RGBA;
-        default:
-            std::cout << "WARN::Cannot identify color channel" << std::endl;
-            return -1;
-    }
-}
 
 class Texture {
 private:

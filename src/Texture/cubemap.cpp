@@ -1,4 +1,5 @@
 #include "cubemap.hpp"
+#include "Texture/texture.hpp"
 
 Cubemap::Cubemap(): m_Dirty{true} {}
 
@@ -26,10 +27,16 @@ void Cubemap::load(std::array<std::string, 6> paths, TextureConfig tex_conf) {
 
 
         if (data) {
-            GLenum format = get_color_format(nrComponents);
+            GLenum internal_format = tex_conf.internal_format;
+            GLenum data_format = tex_conf.data_format;
 
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, format, m_Width,
-                         m_Height, 0, format, GL_UNSIGNED_BYTE, data);
+            if (data_format == -1) {
+                internal_format = get_internal_format(nrComponents, tex_conf.gamma_correction);
+                data_format = get_data_format(nrComponents);
+            }
+
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internal_format, m_Width,
+                         m_Height, 0, data_format, GL_UNSIGNED_BYTE, data);
 
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, tex_conf.mag_filter);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, tex_conf.min_filter);
