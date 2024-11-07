@@ -38,6 +38,10 @@ struct EngineState {
     unsigned int MSAA_ENBL;
     unsigned int MSAA_MULTIPLIER;
 
+    int SHADOW_ENBL;
+    unsigned int SHADOW_WIDTH;
+    unsigned int SHADOW_HEIGHT;
+
     EngineState() {
         LIGHT_DIR = glm::vec3(-4.0f, -2.0f, -3.0f);
         LIGHT_AMBIENT = glm::vec3(0.1f);
@@ -76,6 +80,8 @@ struct EngineState {
 
         MSAA_MULTIPLIER = 4;
 
+        SHADOW_ENBL = false;
+        SHADOW_WIDTH = SHADOW_HEIGHT = 1024;
     }
 };
 

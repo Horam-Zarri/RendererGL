@@ -54,6 +54,19 @@ public:
     ) : direction{direction}, ambient{light_color},
         diffuse{light_color}, specular{light_color} {}
 
+    inline const glm::vec3& getDirection() const {
+        return direction;
+    }
+    inline const glm::vec3& getAmbient() const {
+        return ambient;
+    }
+    inline const glm::vec3& getDiffuse() const {
+        return diffuse;
+    }
+    inline const glm::vec3& getSpecular() const {
+        return specular;
+    }
+
     inline void setDirection(const glm::vec3& direction) {
         this->direction = direction;
     }

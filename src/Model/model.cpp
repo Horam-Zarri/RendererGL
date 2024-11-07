@@ -151,7 +151,7 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
             texture.init();
             std::string fpath = std::string(str.C_Str());
             fpath = directory + '/' + fpath;
-            texture.load_file(fpath);
+            texture.loadFile(fpath);
             if (type == aiTextureType_DIFFUSE)
                 texture.m_Type = TextureType::DIFFUSE;
             else

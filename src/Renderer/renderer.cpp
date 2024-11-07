@@ -40,6 +40,9 @@ static std::unique_ptr<Framebuffer> msaa_fbo;
 static std::unique_ptr<Renderbuffer> msaa_rbo;
 static MultisampleTexture msaa_tex;
 
+static std::unique_ptr<Framebuffer> shadow_fbo;
+static Texture shadow_tex;
+
 // if MSAA is disabled we draw directly to offscr_fbo
 static std::unique_ptr<Framebuffer> offscr_fbo;
 static std::unique_ptr<Renderbuffer> offscr_rbo;
@@ -51,6 +54,7 @@ static std::unique_ptr<Shader> offscr_shader;
 static std::unique_ptr<Shader> pp_shader;
 static std::unique_ptr<Shader> light_cube_shader;
 static std::unique_ptr<Shader> skybox_shader;
+static std::unique_ptr<Shader> shadow_map_shader;
 
 static std::unique_ptr<DirectionalLight> dir_light;
 static std::vector<std::shared_ptr<PointLight>> point_lights;
@@ -150,7 +154,7 @@ void setup_offscr_pass() {
     offscr_fbo = std::make_unique<Framebuffer>();
 
     offscr_tex.init();
-    offscr_tex.gen_color_buffer(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+    offscr_tex.genColorBuffer(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
     offscr_rbo = std::unique_ptr<Renderbuffer>
         (new Renderbuffer(
@@ -170,7 +174,7 @@ void setup_offscr_pass() {
     msaa_fbo = std::make_unique<Framebuffer>();
 
     msaa_tex.init();
-    msaa_tex.gen_color_buffer(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+    msaa_tex.genColorBuffer(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
     msaa_rbo = std::unique_ptr<Renderbuffer>
         (new Renderbuffer(
@@ -190,6 +194,40 @@ void setup_offscr_pass() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void shadow_pass() {
+    shadow_fbo->bind();
+    glViewport(0, 0, g_Engine.SHADOW_WIDTH, g_Engine.SHADOW_HEIGHT);
+
+    float near_plane = 0.1f, far_plane = 17.5f;
+    glm::mat4 lightProj = glm::ortho(-10.f, 10.f, -10.f, 10.f, near_plane, far_plane);
+    glm::mat4 lightView = glm::lookAt(
+        -dir_light->getDirection(),
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(0.0, 1.0, 0.0)
+    );
+
+    glm::mat4 lightSpaceMatrix = lightProj * lightView;
+}
+
+void setup_shadow_pass() {
+    shadow_fbo = std::make_unique<Framebuffer>();
+
+    shadow_tex.init();
+    shadow_tex.genDepthBuffer(g_Engine.SHADOW_WIDTH, g_Engine.SHADOW_HEIGHT);
+
+    shadow_fbo->attachTexture(GL_DEPTH_ATTACHMENT, shadow_tex);
+
+    shadow_fbo->bind();
+
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Shadow map Framebuffer is not complete!" <<
+            std::endl;
+
+    shadow_fbo->unbind();
+}
 
 void postprocess_pass() {
     glViewport(0, 0, g_Engine.SCREEN_WIDTH, g_Engine.SCREEN_HEIGHT);
@@ -225,6 +263,9 @@ void render() {
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    if (g_Engine.SHADOW_ENBL)
+        shadow_pass();
+
     offscr_shader->use();
     offscr_pass();
 
@@ -259,16 +300,17 @@ int init() {
     glEnable(GL_STENCIL_TEST);
 
     // TODO: This whole init section is messed up
-    Shader shader_l("./shaders/default_obj_vs.glsl", "./shaders/default_obj_fs.glsl");
-    Shader shaderLC_l("./shaders/light_cube_vs.glsl", "./shaders/light_cube_fs.glsl");
-    Shader shader_pp("./shaders/screen_PP_vs.glsl", "./shaders/screen_PP_fs.glsl");
-    Shader shader_skb("./shaders/skybox_vs.glsl", "./shaders/skybox_fs.glsl");
+    Shader shader_def("./shaders/default_obj_vs.glsl", "./shaders/default_obj_fs.glsl");
+    Shader shader_lc("./shaders/light_cube_vs.glsl", "./shaders/light_cube_fs.glsl");
+    Shader shader_post("./shaders/screen_PP_vs.glsl", "./shaders/screen_PP_fs.glsl");
+    Shader shader_sky("./shaders/skybox_vs.glsl", "./shaders/skybox_fs.glsl");
+    Shader shader_shadow("./shaders/shadow_map_vs.glsl", "./shaders/shadow_map_fs.glsl");
 
-
-    offscr_shader = std::make_unique<Shader>(shader_l);
-    light_cube_shader = std::make_unique<Shader>(shaderLC_l);
-    pp_shader = std::make_unique<Shader>(shader_pp);
-    skybox_shader = std::make_unique<Shader>(shader_skb);
+    offscr_shader = std::make_unique<Shader>(shader_def);
+    light_cube_shader = std::make_unique<Shader>(shader_lc);
+    pp_shader = std::make_unique<Shader>(shader_post);
+    skybox_shader = std::make_unique<Shader>(shader_sky);
+    shadow_map_shader = std::make_unique<Shader>(shader_shadow);
 
     std::unique_ptr<Model> p(new Model("./assets/Sponza/glTF/Sponza.gltf"));
     jtp_model.swap(p);
@@ -299,6 +341,7 @@ int init() {
     std::unique_ptr<Skybox> sk(new Skybox(faces));
     skybox_model.swap(sk);
 
+    setup_shadow_pass();
     setup_offscr_pass();
     setup_postprocess_pass();
 

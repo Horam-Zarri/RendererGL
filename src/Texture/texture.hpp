@@ -11,7 +11,7 @@
 enum class TextureType {
     DIFFUSE, SPECULAR,
     COLOR_ATTACH, COLOR_ATTACH_MULTISAMPLE,
-    DEPTH_STENCIL_ATTACH
+    DEPTH_ATTACH,
 };
 
 static inline GLenum get_internal_format(int nrComponents, bool gamma_correction) {
@@ -78,12 +78,12 @@ public:
     Texture();
 
     void init();
-    virtual void gen_color_buffer(unsigned int width, unsigned int height);
-    virtual void gen_depth_stencil_buffer(unsigned int width, unsigned int height);
+    virtual void genColorBuffer(unsigned int width, unsigned int height);
+    virtual void genDepthBuffer(unsigned int width, unsigned int height);
 
     virtual void resize(unsigned int width, unsigned height);
 
-    void load_file(const std::string& path, TextureConfig tex_conf = TextureConfig());
+    void loadFile(const std::string& path, TextureConfig tex_conf = TextureConfig());
 
     void bind() const;
     void bind(unsigned int slot) const;

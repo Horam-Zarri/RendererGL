@@ -1,5 +1,6 @@
 #include "texture.hpp"
 #include "Core/Shader/shader.hpp"
+#include "Model/model.hpp"
 #include "Renderer/camera.hpp"
 #include "Renderer/renderer.hpp"
 
@@ -18,7 +19,7 @@ void Texture::handle_dirty() {
     }
 }
 
-void Texture::gen_color_buffer(unsigned int width, unsigned int height) {
+void Texture::genColorBuffer(unsigned int width, unsigned int height) {
     handle_dirty();
 
     m_Type = TextureType::COLOR_ATTACH;
@@ -35,15 +36,21 @@ void Texture::gen_color_buffer(unsigned int width, unsigned int height) {
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void Texture::gen_depth_stencil_buffer(unsigned int width, unsigned int height) {
+void Texture::genDepthBuffer(unsigned int width, unsigned int height) {
     handle_dirty();
 
-    m_Type = TextureType::DEPTH_STENCIL_ATTACH;
+    m_Type = TextureType::DEPTH_ATTACH;
 
     glBindTexture(GL_TEXTURE_2D, m_TextureID);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height, 0,
-                 GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0,
+                 GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
     glBindTexture(GL_TEXTURE_2D, 0);
 }
@@ -52,10 +59,10 @@ void Texture::resize(unsigned int width, unsigned int height) {
     // somewhat straightforward solution for now
     switch(m_Type) {
         case TextureType::COLOR_ATTACH:
-            gen_color_buffer(width, height);
+            genColorBuffer(width, height);
             break;
-        case TextureType::DEPTH_STENCIL_ATTACH:
-            gen_depth_stencil_buffer(width, height);
+        case TextureType::DEPTH_ATTACH:
+            genDepthBuffer(width, height);
             break;
 
         default:
@@ -63,7 +70,7 @@ void Texture::resize(unsigned int width, unsigned int height) {
     }
 }
 
-void Texture::load_file(const std::string& path, TextureConfig tex_conf) {
+void Texture::loadFile(const std::string& path, TextureConfig tex_conf) {
     handle_dirty();
 
     m_Path = path;

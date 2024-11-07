@@ -8,7 +8,7 @@ class MultisampleTexture : public Texture {
 public:
     MultisampleTexture() : Texture::Texture() {}
 
-    virtual void gen_color_buffer(unsigned int width, unsigned int height) override {
+    virtual void genColorBuffer(unsigned int width, unsigned int height) override {
 
         handle_dirty();
 
@@ -31,7 +31,7 @@ public:
     virtual void resize(unsigned int width, unsigned int height) override {
         switch (m_Type) {
             case TextureType::COLOR_ATTACH_MULTISAMPLE:
-                gen_color_buffer(width, height);
+                genColorBuffer(width, height);
             break;
             default:
             break;
