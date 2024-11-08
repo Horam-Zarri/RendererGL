@@ -86,14 +86,14 @@ void main()
             const float g_weight = 0.7152;
             const float b_weight = 0.0722;
 
-            float avg = r_weight * FragColor.r + g_weight * FragColor.g
-                + b_weight * FragColor.b;
+            float avg = r_weight * color.r + g_weight * color.g
+                + b_weight * color.b;
 
             color = vec3(avg, avg, avg);
         }
     }
 
-    if (!gamma)
+    if (gamma)
         color = pow(color, vec3(1.0/2.2));
 
     FragColor = vec4(color, 1.0);

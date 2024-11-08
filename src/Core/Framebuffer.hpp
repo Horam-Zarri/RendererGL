@@ -1,44 +1,29 @@
 #ifndef FRAMEBUFFER_H
 #define FRAMEBUFFER_H
 
-#include "Core/Renderbuffer.hpp"
-#include "Texture/texture.hpp"
+#include "Texture/Texture.hpp"
+#include "RenderBuffer.hpp"
+#include "Util/MoveOnly.hpp"
+#include "Util/Ptr.hpp"
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 
-class Framebuffer {
+class FrameBuffer {
+    GENERATE_PTR(FrameBuffer)
+    MAKE_MOVE_ONLY(FrameBuffer)
 private:
     unsigned int m_FrameBufferID;
 public:
 
-    Framebuffer() {
-        glGenFramebuffers(1, &m_FrameBufferID);
-    }
+    FrameBuffer();
 
-    void attachTexture(int attachment_target, Texture& texture)
-    {
-        bind();
-        glFramebufferTexture2D(GL_FRAMEBUFFER, attachment_target,
-            texture.m_Type == TextureType::COLOR_ATTACH_MULTISAMPLE
-            ? GL_TEXTURE_2D_MULTISAMPLE
-            : GL_TEXTURE_2D,
-            texture.id(), 0);
-    }
+    void attachTexture(int attachment_target, const Texture::Ptr& texture);
+    void attachRenderBuffer(int attachent_target, const RenderBuffer::Ptr& rbo);
 
-    void attachRenderBuffer(int attachent_target, Renderbuffer& rbo) {
-        bind();
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachent_target,
-                                  GL_RENDERBUFFER, rbo.id());
-    }
+    void blitTo(const FrameBuffer::Ptr& other, unsigned int width, unsigned int height);
 
-    void blitTo(Framebuffer& other, unsigned int width, unsigned int height) {
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FrameBufferID);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, other.m_FrameBufferID);
-
-        glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-                          GL_COLOR_BUFFER_BIT, GL_NEAREST);
-    }
     inline void bind() const {
         glBindFramebuffer(GL_FRAMEBUFFER, m_FrameBufferID);
     }

@@ -1,21 +1,15 @@
-#include "model.hpp"
-#include "Lighting/material.hpp"
+#include "Model.hpp"
+#include "Lighting/Material.hpp"
+#include "assimp/material.h"
 
 #include <stb_image.h>
 
 
-Model::Model(const char* path) {
+Model::Model(const std::string& path) {
     loadModel(path);
 }
 
-void Model::Draw(Shader& shader) {
-    for (unsigned int i = 0; i < meshes.size(); i++)
-        meshes[i]->Draw(shader);
-}
 
-Model::~Model() {
-    std::cout << "MODEL::DEALLOCATION::" << std::endl;
-}
 void Model::loadModel(std::string path) {
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
@@ -25,20 +19,24 @@ void Model::loadModel(std::string path) {
     {
         std::cout << "ERROR::ASSIMP::" << importer.GetErrorString() << std::endl;
     }
-    directory = path.substr(0, path.find_last_of('/'));
+    m_Directory = path.substr(0, path.find_last_of('/'));
 
     std::cout << "ASSIMP::LOAD_MODEL" << std::endl;
     processNode(scene->mRootNode, scene);
+
+    // Remove extra texture references
+    m_TexturesLoaded.clear();
 }
 
 void Model::processNode(aiNode* node, const aiScene* scene) {
 
     std::cout << "ASSIMP::NODE::" << node->mName.C_Str() << std::endl;
+
     for (unsigned int i = 0; i < node->mNumMeshes; i++) {
         std::cout << "ASSIMP::MESH::" << scene->mMeshes[node->mMeshes[i]]->mName.C_Str() << std::endl;
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
         std::cout << "AAAA" << std::endl;
-        meshes.push_back(processMesh(mesh, scene));
+        m_Meshes.push_back(processMesh(mesh, scene));
         std::cout << "BBBB" << std::endl;
     }
 
@@ -47,10 +45,10 @@ void Model::processNode(aiNode* node, const aiScene* scene) {
     }
 }
 
-std::unique_ptr<Mesh> Model::processMesh(aiMesh* mesh, const aiScene* scene) {
+Mesh::Ptr Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
-    std::vector<Texture> textures;
+    std::vector<Texture::Ptr> textures;
 
     std::cout << "ASSIMP::VERTEX_COUNT::" << mesh->mNumVertices << std::endl;
 
@@ -95,10 +93,10 @@ std::unique_ptr<Mesh> Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     if(mesh->mMaterialIndex >= 0)
     {
         aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
-        std::vector<Texture> diffuseMaps = loadMaterialTextures(material,
+        std::vector<Texture::Ptr> diffuseMaps = loadMaterialTextures(material,
                                                                 aiTextureType_DIFFUSE);
         textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-        std::vector<Texture> specularMaps = loadMaterialTextures(material,
+        std::vector<Texture::Ptr> specularMaps = loadMaterialTextures(material,
                                                                  aiTextureType_SPECULAR);
         textures.insert(textures.end(), specularMaps.begin(),
                         specularMaps.end());
@@ -106,58 +104,61 @@ std::unique_ptr<Mesh> Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 
     std::cout << "AFTER MATERIAL" << std::endl;
 
+    Mesh::Ptr _mesh = Mesh::New(vertices, indices, textures);
+
     if (textures.empty()) {
         constexpr glm::vec3 DEFAULT_OBJ_COLOR(1.0f);
-        return std::unique_ptr<Mesh>(
-            new Mesh(vertices, indices, std::unique_ptr<PhongMaterial>
-                     (new PhongMaterial(DEFAULT_OBJ_COLOR))));
+        _mesh->setMaterial(BasicMaterial::New(DEFAULT_OBJ_COLOR));
     } else {
-        std::cout << "AFTER MATERIAL 2" << std::endl;
-        std::unique_ptr<Material> pm;
-
-        if (textures.size() == 1)
-            pm = std::make_unique<PhongMaterial>(textures[0]);
-        else
-            pm = std::make_unique<PhongMaterial>(textures[0], textures[1]);
-
-        return std::unique_ptr<Mesh>(
-            new Mesh(vertices, indices, std::move(pm)));
+        _mesh->setMaterial(PhongMaterial::New());
     }
+
+    return _mesh;
 }
 
-std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type)
+std::vector<Texture::Ptr> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type)
 {
-    std::vector<Texture> textures;
+    std::vector<Texture::Ptr> textures;
     std::cout << "ASSIMP::TEXTURE_COUNT::" << type << "::"  << mat->GetTextureCount(type) << std::endl;
+
     for (unsigned int i = 0; i < mat->GetTextureCount(type); i++) {
         aiString str;
         mat->GetTexture(type, i, &str);
         bool skip = false;
 
         std::cout << "ASSIMP::TEXTURE_FILE::" << str.C_Str() << std::endl;
-        for (unsigned int j = 0; j < textures_loaded.size(); j++) {
-            std::string fname = std::filesystem::path(textures_loaded[j].m_Path).filename().string();
+        for (unsigned int j = 0; j < m_TexturesLoaded.size(); j++) {
+            std::string fname = std::filesystem::path(m_TexturesLoaded[j]->m_Path).filename().string();
             if (std::strcmp(fname.data(), str.C_Str()) == 0)
             {
                 std::cout << "ASSIMP::TEXTURE_ALREADY_EXISTS" << std::endl;
-                textures.push_back(textures_loaded[j]);
+                textures.push_back(m_TexturesLoaded[j]);
                 skip = true;
                 break;
             }
         }
 
         if (!skip) {
-            Texture texture;
-            texture.init();
+
             std::string fpath = std::string(str.C_Str());
-            fpath = directory + '/' + fpath;
-            texture.loadFile(fpath);
+            fpath = m_Directory + '/' + fpath;
+
+            TextureType tex_type;
+
             if (type == aiTextureType_DIFFUSE)
-                texture.m_Type = TextureType::DIFFUSE;
+                tex_type = TextureType::Diffuse;
             else
-                texture.m_Type = TextureType::SPECULAR;
-            textures.push_back(texture);
-            textures_loaded.push_back(texture);
+                tex_type = TextureType::Specular;
+
+            Texture::Ptr tx = Texture::New(fpath, tex_type);
+
+            if (type == aiTextureType_DIFFUSE)
+                tx->setSlot(0);
+            else
+                tx->setSlot(1);
+
+            textures.push_back(tx);
+            m_TexturesLoaded.push_back(tx);
         }
     }
 

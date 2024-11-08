@@ -1,8 +1,8 @@
 #include <iostream>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-#include "Renderer/window.hpp"
-#include "Renderer/renderer.hpp"
+#include "Renderer/Window.hpp"
+#include "Renderer/Renderer.hpp"
 
 int main()
 {
@@ -20,7 +20,7 @@ int main()
     {
         window::handle_input();
 
-        renderer::update_state();
+        renderer::updateState();
         renderer::render();
 
         window::render_gui();

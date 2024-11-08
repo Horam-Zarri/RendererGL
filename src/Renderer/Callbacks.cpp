@@ -1,8 +1,8 @@
-#include "callbacks.hpp"
+#include "Callbacks.hpp"
 #include "GLFW/glfw3.h"
-#include "Renderer/camera.hpp"
-#include "Renderer/renderer.hpp"
-#include "Renderer/window.hpp"
+#include "Camera.hpp"
+#include "Renderer.hpp"
+#include "Window.hpp"
 #include <iostream>
 
 using renderer::camera::CAMERA_STATE;
@@ -17,19 +17,19 @@ void callback::framebuffer_size_callback(GLFWwindow *window, int width, int heig
 void callback::process_input(GLFWwindow *window, float delta_frame)
 {
 
-    using renderer::camera::Camera_Movement;
+    using renderer::camera::CameraMovement;
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        CAMERA_STATE.ProcessMovement(Camera_Movement::FORWARD, delta_frame);
+        CAMERA_STATE.ProcessMovement(CameraMovement::FORWARD, delta_frame);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        CAMERA_STATE.ProcessMovement(Camera_Movement::BACKWARD, delta_frame);
+        CAMERA_STATE.ProcessMovement(CameraMovement::BACKWARD, delta_frame);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        CAMERA_STATE.ProcessMovement(Camera_Movement::LEFT, delta_frame);
+        CAMERA_STATE.ProcessMovement(CameraMovement::LEFT, delta_frame);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        CAMERA_STATE.ProcessMovement(Camera_Movement::RIGHT, delta_frame);
+        CAMERA_STATE.ProcessMovement(CameraMovement::RIGHT, delta_frame);
 }
 
 void callback::mouse_callback(GLFWwindow* window, double xposIn, double yposIn)

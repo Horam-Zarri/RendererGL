@@ -1,192 +1,282 @@
-#include "renderer.hpp"
-#include "Texture/multisampletexture.hpp"
-#include "camera.hpp"
+#include "Renderer.hpp"
+#include "Camera.hpp"
 
-#include "GLFW/glfw3.h"
+#include <GLFW/glfw3.h>
 
 #include <array>
+
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/trigonometric.hpp>
 #include <glm/vec3.hpp>
 
-#include "Core/Framebuffer.hpp"
-#include "Core/Renderbuffer.hpp"
-#include "Core/Shader/shader.hpp"
-#include "Core/Shapes/cube.hpp"
-#include "Core/Shapes/quad.hpp"
+#include "Core/FrameBuffer.hpp"
+#include "Core/RenderBuffer.hpp"
+#include "Core/Shader/Shader.hpp"
+#include "Core/Shapes/Cube.hpp"
+#include "Core/Shapes/Quad.hpp"
 
-#include "Model/model.hpp"
-#include "Texture/texture.hpp"
-#include "Lighting/light.hpp"
+#include "Model/Model.hpp"
 
-#include "skybox.hpp"
-#include "window.hpp"
+#include "Texture/Texture.hpp"
+#include "Texture/MultisampleTexture.hpp"
+#include "Lighting/Light.hpp"
+
+#include "Skybox.hpp"
+#include "Window.hpp"
+#include "glm/ext/matrix_clip_space.hpp"
 
 #include <memory>
+#include <ostream>
 #include <stb_image.h>
 
 namespace renderer {
 
 using camera::Camera;
 
-Camera camera::g_Camera(glm::vec3(0.0f, 0.0f, 3.0f));
-Camera camera::CAMERA_STATE(glm::vec3(0.0f, 0.0f, 3.0f));
-
 EngineState g_Engine;
 EngineState ENGINE_STATE;
 
+Camera camera::g_Camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera::CAMERA_STATE(glm::vec3(0.0f, 0.0f, 3.0f));
+
+Shader::Ptr shaderDefault;
+Shader::Ptr shaderPhong;
+Shader::Ptr shaderPostProcess;
+Shader::Ptr shaderSkybox;
+Shader::Ptr shaderShadow;
+
+std::vector<Scene::Ptr> g_Scenes;
+DirectionalLight::Ptr g_SunLight;
+std::vector<Light::Ptr> g_Lights;
+
+FrameBuffer::Ptr fboShadow;
+FrameBuffer::Ptr fboOffscrMSAA;
+FrameBuffer::Ptr fboOffscr;
+
+RenderBuffer::Ptr rboOffscr;
+RenderBuffer::Ptr rboOffscrMSAA;
+
+DepthBufferTexture::Ptr texShadowmap;
+ColorBufferTexture::Ptr texOffscr;
+MultisampleTexture::Ptr texOffscrMSAA;
+
+Quad::Ptr screenQuad;
+Cube::Ptr pointLightsCube;
+
+Skybox::Ptr skybox;
+
 // if MSAA is enabled we draw to msaa_fbo then blit to offscr_fbo
-static std::unique_ptr<Framebuffer> msaa_fbo;
-static std::unique_ptr<Renderbuffer> msaa_rbo;
-static MultisampleTexture msaa_tex;
-
-static std::unique_ptr<Framebuffer> shadow_fbo;
-static Texture shadow_tex;
-
-// if MSAA is disabled we draw directly to offscr_fbo
-static std::unique_ptr<Framebuffer> offscr_fbo;
-static std::unique_ptr<Renderbuffer> offscr_rbo;
-static Texture offscr_tex;
-
-static std::unique_ptr<Quad> screen_quad;
-
-static std::unique_ptr<Shader> offscr_shader;
-static std::unique_ptr<Shader> pp_shader;
-static std::unique_ptr<Shader> light_cube_shader;
-static std::unique_ptr<Shader> skybox_shader;
-static std::unique_ptr<Shader> shadow_map_shader;
-
-static std::unique_ptr<DirectionalLight> dir_light;
-static std::vector<std::shared_ptr<PointLight>> point_lights;
-static std::unique_ptr<Cube> point_lights_cube;
-
-static std::unique_ptr<Model> jtp_model;
-static std::unique_ptr<Skybox> skybox_model;
 
 
 
-void send_offscr_uniforms() {
-    glm::mat4 md = glm::mat4(1.0f);
-    md = glm::translate(md, g_Engine.OBJECT_POS);
-    md = glm::scale(md, glm::vec3(0.01));
-    md = glm::rotate(md, glm::radians(0.0f), glm::vec3(1.0, 0.0, 0.0));
-    offscr_shader->setMat4("model", md);
-    offscr_shader->setMat4("view", camera::g_Camera.GetViewMatrix());
-    offscr_shader->setMat4("projection", glm::perspective(glm::radians(camera::g_Camera.Zoom),
-                                                          ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE));
-    offscr_shader->setVec3("viewPos", camera::g_Camera.Position);
+void sendShadowMapUniforms() {
 
-    offscr_shader->setBool("blinn", g_Engine.BLINN_ENBL);
+    //bool shadow_mapping = g_Engine.SHADOW_ENBL;
 
-    // lights
-    dir_light->sendUniforms(*offscr_shader);
+    //shadow_map_shader->setBool("shadowMapping", shadow_mapping);
 
-    offscr_shader->setInt("pointLightsSize", point_lights.size());
-    for (unsigned int i = 0; i < point_lights.size(); i++) {
-        point_lights[i]->sendUniforms(*offscr_shader, i);
-    }
+    //if (!shadow_mapping) return;
+
+    //float near_plane = 0.1f, far_plane = 17.5f;
+    //glm::mat4 lightProj = glm::ortho(-10.f, 10.f, -10.f, 10.f, near_plane, far_plane);
+    //glm::mat4 lightView = glm::lookAt(
+    //    -dir_light->getDirection(),
+    //    glm::vec3(0.0f, 0.0f, 0.0f),
+    //    glm::vec3(0.0, 1.0, 0.0)
+    //);
+
+    //glm::mat4 lightSpaceMatrix = lightProj * lightView;
+
+    //shadow_map_shader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+}
+
+void sendOffscrUniforms() {
+    //glm::mat4 md = glm::mat4(1.0f);
+    //md = glm::translate(md, g_Engine.OBJECT_POS);
+    //md = glm::scale(md, glm::vec3(0.01));
+    //md = glm::rotate(md, glm::radians(0.0f), glm::vec3(1.0, 0.0, 0.0));
+    //offscr_shader->setMat4("model", md);
+    //offscr_shader->setMat4("view", camera::g_Camera.GetViewMatrix());
+    //offscr_shader->setMat4("projection", glm::perspective(glm::radians(camera::g_Camera.Zoom),
+    //                                                      ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE));
+    //offscr_shader->setVec3("viewPos", camera::g_Camera.Position);
+
+    //offscr_shader->setBool("blinn", g_Engine.BLINN_ENBL);
+
+    //// lights
+    //dir_light->sendUniforms(*offscr_shader);
+
+    //offscr_shader->setInt("pointLightsSize", point_lights.size());
+    //for (unsigned int i = 0; i < point_lights.size(); i++) {
+    //    point_lights[i]->sendUniforms(*offscr_shader, i);
+    //}
 
 }
 
-void send_postprocess_uniforms() {
-    pp_shader->setInt("screenTexture", 0);
+void sendPostprocessUniforms() {
 
-    pp_shader->setBool("sharpen", g_Engine.SHARPNESS_ENBL);
-    pp_shader->setFloat("sharpness", g_Engine.SHARPNESS_AMOUNT);
+    shaderPostProcess->setInt("screenTexture", 0);
+    shaderPostProcess->setBool("gamma", true);
 
-    pp_shader->setBool("blur", g_Engine.BLUR_ENBL);
-    pp_shader->setBool("grayscale", g_Engine.GRAYSCALE_ENBL);
+    //pp_shader->setInt("screenTexture", 0);
 
-    offscr_tex.bind(0);
+    shaderPostProcess->setBool("sharpen", g_Engine.SHARPNESS_ENBL);
+    shaderPostProcess->setFloat("sharpness", g_Engine.SHARPNESS_AMOUNT);
+
+    shaderPostProcess->setBool("blur", g_Engine.BLUR_ENBL);
+    shaderPostProcess->setBool("grayscale", g_Engine.GRAYSCALE_ENBL);
+
+    texOffscr->setSlot(TEXTURE_SLOT_SCREEN);
+    texOffscr->bind();
+    //offscr_tex.bind(0);
 }
 
-void offscr_pass() {
+void offscrPass() {
     glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
+    glEnable(GL_DEPTH_TEST);
     // Draw Models
-    offscr_shader->use();
-    send_offscr_uniforms();
+    //offscr_shader->use();
+    sendOffscrUniforms();
 
     if (g_Engine.MSAA_ENBL)
-        msaa_fbo->bind();
+        fboOffscrMSAA->bind();
     else
-        offscr_fbo->bind();
+        fboOffscr->bind();
 
-    glEnable(GL_DEPTH_TEST);
 
     glClearColor(g_Engine.CLEAR_COLOR.r,g_Engine.CLEAR_COLOR.g, g_Engine.CLEAR_COLOR.b, g_Engine.CLEAR_COLOR.a); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    glm::mat4 view = camera::g_Camera.GetViewMatrix();
+    glm::mat4 proj = glm::perspective(camera::g_Camera.Fov(), ASPECT_RATIO,
+                                      g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE);
 
-    jtp_model->Draw(*offscr_shader);
-    skybox_model->Draw(*skybox_shader, camera::g_Camera);
+
+    // TODO: THIS IS SO DIRTY
+    shaderPhong->use();
+
+    shaderPhong->setInt("pointLightsSize", g_Lights.size());
+    for (unsigned int i = 0; i < g_Lights.size(); ++i) {
+        PointLight::Ptr pl = std::dynamic_pointer_cast<PointLight, Light>(g_Lights[i]);
+
+        std::string base = "pointLights[" + std::to_string(i) + "]";
+        shaderPhong->setVec3(base + ".position", pl->getPosition());
+
+        std::cout << "AMBIENT: " << pl->getAmbient().x << std::endl;
+
+        shaderPhong->setVec3(base + ".ambient", pl->getAmbient());
+        shaderPhong->setVec3(base + ".diffuse", pl->getDiffuse());
+        shaderPhong->setVec3(base + ".specular", pl->getPosition());
+
+        Attenuation atten = pl->getAttenuation();
+
+        shaderPhong->setFloat(base + ".constant", atten.constant);
+        shaderPhong->setFloat(base + ".linear", atten.linear);
+        shaderPhong->setFloat(base + ".quadratic", atten.quadratic);
+    }
+
+    shaderPhong->setInt("material.shininess", 32);
+
+    shaderPhong->setVec3("directionalLight.direction", g_SunLight->getDirection());
+    shaderPhong->setVec3("directionalLight.ambient", g_SunLight->getAmbient());
+    shaderPhong->setVec3("directionalLight.diffuse", g_SunLight->getDiffuse());
+    shaderPhong->setVec3("directionalLight.specular", g_SunLight->getSpecular());
+
+    shaderPhong->setBool("blinn", g_Engine.BLINN_ENBL);
+    shaderPhong->setVec3("viewPos", camera::g_Camera.Position);
+
+    glm::mat4 md(1.0f);
+    md = glm::translate(md, g_Engine.OBJECT_POS);
+    md = glm::scale(md, glm::vec3(0.01f));
+
+    shaderPhong->setMat4("model", md);
+    shaderPhong->setMat4("view", view);
+    shaderPhong->setMat4("projection", proj);
+
+    for (const Scene::Ptr& scene : g_Scenes) {
+        for (const MeshGroup::Ptr& mesh_group : scene->getMeshGroups()) {
+            for (const Mesh::Ptr& mesh : mesh_group->getMeshes()) {
+
+                for (const auto& tx : mesh->getTextures()) {
+                    tx->bind();
+                }
+
+                mesh->draw();
+            }
+        }
+    }
+
+    // Draw skybox
+
+    shaderSkybox->use();
+    shaderSkybox->setMat4("view", glm::mat4(glm::mat3(view)));
+    shaderSkybox->setMat4("projection", proj);
+
+    skybox->draw();
 
     // Draw Lights
 
     // light cubes should be always visible
     glDisable(GL_DEPTH_TEST);
 
-    light_cube_shader->use();
-    for (unsigned int i = 0; i < point_lights.size(); i++) {
-        glm::mat4 md(1.0f);
-        md = glm::translate(md, point_lights[i]->getPosition());
-        md = glm::scale(md, glm::vec3(0.5));
-        light_cube_shader->setMat4("model", md);
-        light_cube_shader->setMat4("view", camera::g_Camera.GetViewMatrix());
-        light_cube_shader->setMat4("projection", glm::perspective(glm::radians(camera::g_Camera.Zoom),
-                                                                  ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE));
-        point_lights_cube->Draw();
+    shaderDefault->use();
+    for (unsigned int i = 0; i < g_Lights.size(); ++i) {
 
+        const auto& light = g_Lights[i];
+
+        glm::mat4 md(1.0f);
+
+        if (light->getType() == LightType::PointLight) {
+
+            PointLight* pl = dynamic_cast<PointLight*>(light.get());
+
+            md = glm::translate(md, pl->getPosition());
+            md = glm::scale(md, glm::vec3(0.5f));
+
+
+            shaderDefault->setMat4("model", md);
+            shaderDefault->setMat4("view", camera::g_Camera.GetViewMatrix());
+            shaderDefault->setMat4("projection", glm::perspective(camera::g_Camera.Fov(), ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE));
+
+            pointLightsCube->draw();
+        }
     }
 
     glEnable(GL_DEPTH_TEST);
 
     if (g_Engine.MSAA_ENBL)
-        msaa_fbo->blitTo(*offscr_fbo, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        fboOffscrMSAA->blitTo(fboOffscr, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 
 
-void setup_offscr_pass() {
+void setupOffscrPass() {
 
-    offscr_fbo = std::make_unique<Framebuffer>();
+    fboOffscr = FrameBuffer::New();
+    texOffscr = ColorBufferTexture::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+    rboOffscr = RenderBuffer::New(RBType::DEPTH_STENCIL, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
-    offscr_tex.init();
-    offscr_tex.genColorBuffer(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+    fboOffscr->attachTexture(GL_COLOR_ATTACHMENT0, texOffscr);
+    fboOffscr->attachRenderBuffer(GL_DEPTH_STENCIL_ATTACHMENT, rboOffscr);
 
-    offscr_rbo = std::unique_ptr<Renderbuffer>
-        (new Renderbuffer(
-            RBType::DEPTH_STENCIL,
-            g_Engine.RENDER_WIDTH,
-            g_Engine.RENDER_HEIGHT
-        ));
+    fboOffscr->bind();
 
-    offscr_fbo->attachTexture(GL_COLOR_ATTACHMENT0, offscr_tex);
-    offscr_fbo->attachRenderBuffer(GL_DEPTH_STENCIL_ATTACHMENT, *offscr_rbo);
-
-    offscr_fbo->bind();
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: Offscr Framebuffer is not complete!" <<
             std::endl;
 
-    msaa_fbo = std::make_unique<Framebuffer>();
+    fboOffscrMSAA = FrameBuffer::New();
+    texOffscrMSAA = MultisampleTexture::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+    rboOffscrMSAA = RenderBuffer::New(RBType::DEPTH_STENCIL_MULTISAMPLE, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
-    msaa_tex.init();
-    msaa_tex.genColorBuffer(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+    fboOffscrMSAA->attachTexture(GL_COLOR_ATTACHMENT0, texOffscrMSAA);
+    fboOffscrMSAA->attachRenderBuffer(GL_DEPTH_STENCIL_ATTACHMENT, rboOffscrMSAA);
 
-    msaa_rbo = std::unique_ptr<Renderbuffer>
-        (new Renderbuffer(
-            RBType::DEPTH_STENCIL_MULTISAMPLE,
-            g_Engine.RENDER_WIDTH,
-            g_Engine.RENDER_HEIGHT
-        ));
+    fboOffscrMSAA->bind();
 
-    msaa_fbo->attachTexture(GL_COLOR_ATTACHMENT0, msaa_tex);
-    msaa_fbo->attachRenderBuffer(GL_DEPTH_STENCIL_ATTACHMENT, *msaa_rbo);
-
-    msaa_fbo->bind();
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: MSAA Framebuffer is not complete!" <<
             std::endl;
@@ -194,65 +284,64 @@ void setup_offscr_pass() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void shadow_pass() {
-    shadow_fbo->bind();
-    glViewport(0, 0, g_Engine.SHADOW_WIDTH, g_Engine.SHADOW_HEIGHT);
+void shadowPass() {
+    //shadow_fbo->bind();
+    //glViewport(0, 0, g_Engine.SHADOW_WIDTH, g_Engine.SHADOW_HEIGHT);
 
-    float near_plane = 0.1f, far_plane = 17.5f;
-    glm::mat4 lightProj = glm::ortho(-10.f, 10.f, -10.f, 10.f, near_plane, far_plane);
-    glm::mat4 lightView = glm::lookAt(
-        -dir_light->getDirection(),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0.0, 1.0, 0.0)
-    );
+    //sendShadowMapUniforms();
 
-    glm::mat4 lightSpaceMatrix = lightProj * lightView;
 }
 
-void setup_shadow_pass() {
-    shadow_fbo = std::make_unique<Framebuffer>();
+void setupShadowPass() {
 
-    shadow_tex.init();
-    shadow_tex.genDepthBuffer(g_Engine.SHADOW_WIDTH, g_Engine.SHADOW_HEIGHT);
+    fboShadow = FrameBuffer::New();
 
-    shadow_fbo->attachTexture(GL_DEPTH_ATTACHMENT, shadow_tex);
+    // What should we do?
+    //shadow_fbo = std::make_unique<Framebuffer>();
 
-    shadow_fbo->bind();
+    //shadow_tex.init();
+    //shadow_tex.genDepthBuffer(g_Engine.SHADOW_WIDTH, g_Engine.SHADOW_HEIGHT);
 
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
+    //shadow_fbo->attachTexture(GL_DEPTH_ATTACHMENT, shadow_tex);
 
-    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout << "ERROR::FRAMEBUFFER:: Shadow map Framebuffer is not complete!" <<
-            std::endl;
+    //shadow_fbo->bind();
 
-    shadow_fbo->unbind();
+    //glDrawBuffer(GL_NONE);
+    //glReadBuffer(GL_NONE);
+
+    //if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    //    std::cout << "ERROR::FRAMEBUFFER:: Shadow map Framebuffer is not complete!" <<
+    //        std::endl;
+
+    //shadow_fbo->unbind();
 }
 
-void postprocess_pass() {
+void postprocessPass() {
     glViewport(0, 0, g_Engine.SCREEN_WIDTH, g_Engine.SCREEN_HEIGHT);
 
-    pp_shader->use();
+    shaderPostProcess->use();
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    send_postprocess_uniforms();
+    sendPostprocessUniforms();
+
     glDisable(GL_DEPTH_TEST);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
     glClear(GL_COLOR_BUFFER_BIT);
 
-    screen_quad->Draw();
+    screenQuad->draw();
 }
 
-void setup_postprocess_pass() {
+void setupPostprocessPass() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    screen_quad = std::make_unique<Quad>();
+    screenQuad = Quad::New();
 }
 
 void render() {
 
     using namespace window;
 
+    // TODO: WHy dont yOu JusT not do tHis at all
     GLbitfield clr_enbl;
 
     glm::vec4& clr_color = g_Engine.CLEAR_COLOR;
@@ -263,14 +352,14 @@ void render() {
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (g_Engine.SHADOW_ENBL)
-        shadow_pass();
+    // shadow_map_shader->use();
+    // shadowPass();
 
-    offscr_shader->use();
-    offscr_pass();
+    shaderPhong->use();
+    offscrPass();
 
-    pp_shader->use();
-    postprocess_pass();
+    shaderPostProcess->use();
+    postprocessPass();
 
     //glm::mat4 model(1.0f);
     //glm::mat4 view = camera::g_Camera.GetViewMatrix();
@@ -291,39 +380,41 @@ void render() {
 
 int init() {
 
-    // TODO: do something for this
-    stbi_set_flip_vertically_on_load(true);
-
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_STENCIL_TEST);
 
-    // TODO: This whole init section is messed up
-    Shader shader_def("./shaders/default_obj_vs.glsl", "./shaders/default_obj_fs.glsl");
-    Shader shader_lc("./shaders/light_cube_vs.glsl", "./shaders/light_cube_fs.glsl");
-    Shader shader_post("./shaders/screen_PP_vs.glsl", "./shaders/screen_PP_fs.glsl");
-    Shader shader_sky("./shaders/skybox_vs.glsl", "./shaders/skybox_fs.glsl");
-    Shader shader_shadow("./shaders/shadow_map_vs.glsl", "./shaders/shadow_map_fs.glsl");
+    shaderDefault = Shader::New("./shaders/light_cube_vs.glsl", "./shaders/light_cube_fs.glsl");
+    shaderPhong = Shader::New("./shaders/default_obj_vs.glsl", "./shaders/default_obj_fs.glsl");
+    shaderPostProcess = Shader::New("./shaders/screen_PP_vs.glsl", "./shaders/screen_PP_fs.glsl");
+    shaderSkybox = Shader::New("./shaders/skybox_vs.glsl", "./shaders/skybox_fs.glsl");
+    shaderShadow = Shader::New("./shaders/shadow_map_vs.glsl", "./shaders/shadow_map_fs.glsl");
 
-    offscr_shader = std::make_unique<Shader>(shader_def);
-    light_cube_shader = std::make_unique<Shader>(shader_lc);
-    pp_shader = std::make_unique<Shader>(shader_post);
-    skybox_shader = std::make_unique<Shader>(shader_sky);
-    shadow_map_shader = std::make_unique<Shader>(shader_shadow);
+    shaderPhong->setInt("pointLightsSize", 0);
 
-    std::unique_ptr<Model> p(new Model("./assets/Sponza/glTF/Sponza.gltf"));
-    jtp_model.swap(p);
+    shaderPhong->setInt("material.texture_diffuse", 0);
+    shaderPhong->setInt("material.texture_specular", 1);
 
-    dir_light = std::make_unique<DirectionalLight>
-        (g_Engine.LIGHT_DIR, g_Engine.LIGHT_AMBIENT, g_Engine.LIGHT_DIFFUSE, g_Engine.LIGHT_SPECULAR);
+    shaderSkybox->setInt("skybox", TEXTURE_SLOT_SKYBOX);
 
-    dir_light->sendUniforms(*offscr_shader);
+    Scene::Ptr scene = Scene::New();
+    MeshGroup::Ptr model = Model::New("./assets/Sponza/glTF/Sponza.gltf");
+    scene->addGroup(model);
 
-    point_lights_cube = std::make_unique<Cube>();
+    g_Scenes.push_back(scene);
+
+
+    g_SunLight = DirectionalLight::New(
+        g_Engine.LIGHT_DIR,
+        g_Engine.LIGHT_AMBIENT,
+        g_Engine.LIGHT_DIFFUSE,
+        g_Engine.LIGHT_SPECULAR
+    );
+
+    pointLightsCube = Cube::New();
 
     // TODO: this is very ugly
-    offscr_shader->setInt("pointLightsSize", 0);
 
     const std::string base = "./tex/skybox/";
     const std::array<std::string, 6> faces = {
@@ -338,18 +429,17 @@ int init() {
     for (int j = 0; j < 6; j++)
         std::cout << "FACE::" << j << "::" << faces[j] << std::endl;
 
-    std::unique_ptr<Skybox> sk(new Skybox(faces));
-    skybox_model.swap(sk);
+    skybox = Skybox::New(faces);
 
-    setup_shadow_pass();
-    setup_offscr_pass();
-    setup_postprocess_pass();
+    setupShadowPass();
+    setupOffscrPass();
+    setupPostprocessPass();
 
     return 0;
 }
 
-void update_state() {
-    camera::g_Camera.update_camera(camera::CAMERA_STATE);
+void updateState() {
+    camera::g_Camera.updateCamera(camera::CAMERA_STATE);
 
     g_Engine.CLEAR_COLOR = ENGINE_STATE.CLEAR_COLOR;
 
@@ -360,21 +450,21 @@ void update_state() {
     // lighting
     if (g_Engine.LIGHT_DIR != ENGINE_STATE.LIGHT_DIR) {
         g_Engine.LIGHT_DIR = ENGINE_STATE.LIGHT_DIR;
-        dir_light->setDirection(g_Engine.LIGHT_DIR);
+        g_SunLight->setDirection(g_Engine.LIGHT_DIR);
     }
     if (g_Engine.LIGHT_AMBIENT != ENGINE_STATE.LIGHT_AMBIENT) {
         g_Engine.LIGHT_AMBIENT = ENGINE_STATE.LIGHT_AMBIENT;
-        dir_light->setAmbient(g_Engine.LIGHT_AMBIENT);
+        g_SunLight->setAmbient(g_Engine.LIGHT_AMBIENT);
     }
 
     if (g_Engine.LIGHT_DIFFUSE != ENGINE_STATE.LIGHT_DIFFUSE) {
         g_Engine.LIGHT_DIFFUSE = ENGINE_STATE.LIGHT_DIFFUSE;
-        dir_light->setDiffuse(g_Engine.LIGHT_DIFFUSE);
+        g_SunLight->setDiffuse(g_Engine.LIGHT_DIFFUSE);
     }
 
     if (g_Engine.LIGHT_SPECULAR != ENGINE_STATE.LIGHT_SPECULAR) {
         g_Engine.LIGHT_SPECULAR = ENGINE_STATE.LIGHT_SPECULAR;
-        dir_light->setSpecular(g_Engine.LIGHT_SPECULAR);
+        g_SunLight->setSpecular(g_Engine.LIGHT_SPECULAR);
     }
 
     if (g_Engine.BLINN_ENBL != ENGINE_STATE.BLINN_ENBL)
@@ -414,11 +504,18 @@ void update_state() {
     }
 
     if (regen_buffers) {
-        msaa_tex.resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-        msaa_rbo->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        // TODO: resize
+        //msaa_tex.resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        //msaa_rbo->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
-        offscr_tex.resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-        offscr_rbo->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        //offscr_tex.resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        //offscr_rbo->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+
+        texOffscrMSAA->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        rboOffscrMSAA->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+
+        texOffscr->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        rboOffscr->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
     }
 
     if (g_Engine.SCREEN_WIDTH != ENGINE_STATE.SCREEN_WIDTH) {
@@ -438,19 +535,18 @@ void addPointLight() {
     constexpr glm::vec3 initial_color(1.0);
     constexpr unsigned int initial_distance = 13;
 
-    if (point_lights.size() < renderer::NR_MAX_POINT_LIGHTS)
-        point_lights.push_back(std::make_shared<PointLight>
-                               (initial_pos, initial_distance, initial_color));
+    if (g_Lights.size() < renderer::NR_MAX_POINT_LIGHTS)
+        g_Lights.push_back(PointLight::New(initial_pos, initial_distance, initial_color));
 }
 
 void removePointLight(int index) {
-    point_lights.erase(point_lights.begin() + index);
+    g_Lights.erase(g_Lights.begin() + index);
 }
 
-std::shared_ptr<PointLight> getPointLight(int index) {
+const PointLight::Ptr getPointLight(int index) {
     return
-    index < point_lights.size() ?
-    point_lights[index] :
+    index < g_Lights.size() ?
+    std::dynamic_pointer_cast<PointLight, Light>(g_Lights[index]) :
     nullptr;
 }
 

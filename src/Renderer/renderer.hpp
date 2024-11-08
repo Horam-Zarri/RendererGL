@@ -1,8 +1,19 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-#include "Lighting/light.hpp"
-#include "camera.hpp"
+#include "Core/FrameBuffer.hpp"
+#include "Core/RenderBuffer.hpp"
+#include "Core/Scene.hpp"
+#include "Core/Shapes/Cube.hpp"
+#include "Core/Shapes/Quad.hpp"
+#include "Lighting/Light.hpp"
+#include "Renderer/Skybox.hpp"
+#include "Camera.hpp"
+#include "Texture/MultisampleTexture.hpp"
+#include "Texture/ColorBufferTexture.hpp"
+#include "Texture/DepthBufferTexture.hpp"
+
+#include <concepts>
 #include <cstdint>
 
 namespace renderer
@@ -48,7 +59,7 @@ struct EngineState {
         LIGHT_DIFFUSE = glm::vec3(0.5f);
         LIGHT_SPECULAR = glm::vec3(1.0f);
 
-        BLINN_ENBL = true;
+        BLINN_ENBL = false;
 
         OBJECT_POS = glm::vec3(0.0f);
         OBJECT_ROTATION = glm::vec3(0.0f);
@@ -75,7 +86,7 @@ struct EngineState {
         #ifdef __APPLE__
             MSAA_ENBL = false;
         #else
-            MSAA_ENBL = true;
+            MSAA_ENBL = false;
         #endif
 
         MSAA_MULTIPLIER = 4;
@@ -85,6 +96,16 @@ struct EngineState {
     }
 };
 
+constexpr static unsigned int TEXTURE_SLOT_DIFFUSE = 0;
+constexpr static unsigned int TEXTURE_SLOT_SPECULAR = 1;
+
+constexpr static unsigned int TEXTURE_SLOT_SCREEN = 0;
+
+constexpr static unsigned int TEXTURE_SLOT_SKYBOX = 0;
+
+constexpr static float ASPECT_RATIO = 16.0 / 9.0;
+constexpr static unsigned int NR_MAX_POINT_LIGHTS = 10;
+
 namespace camera {
     extern Camera CAMERA_STATE;
     extern Camera g_Camera;
@@ -93,17 +114,46 @@ namespace camera {
 extern EngineState ENGINE_STATE;
 extern EngineState g_Engine;
 
-constexpr static float ASPECT_RATIO = 16.0 / 9.0;
-constexpr static unsigned int NR_MAX_POINT_LIGHTS = 10;
+extern Shader::Ptr shaderDefault;
+extern Shader::Ptr shaderPhong;
+extern Shader::Ptr shaderPostProcess;
+extern Shader::Ptr shaderSkybox;
+extern Shader::Ptr shaderShadow;
 
+extern std::vector<Scene::Ptr> g_Scenes;
+extern DirectionalLight::Ptr g_SunLight;
+extern std::vector<Light::Ptr> g_Lights;
+
+extern FrameBuffer::Ptr fboShadow;
+extern FrameBuffer::Ptr fboOffscrMSAA;
+extern FrameBuffer::Ptr fboOffscr;
+
+extern RenderBuffer::Ptr rboOffscr;
+extern RenderBuffer::Ptr rboOffscrMSAA;
+
+extern DepthBufferTexture::Ptr texShadowmap;
+extern ColorBufferTexture::Ptr texOffscr;
+extern MultisampleTexture::Ptr texOffscrMSAA;
+
+extern Quad::Ptr screenQuad;
+extern Cube::Ptr pointLightsCube;
+
+extern Skybox::Ptr skybox;
+// proj and view
+// camera
+// vector lights
+// fbos
+// quad vao and vbo
+// skybox
+//
 int init();
-void update_state();
+void updateState();
 void render();
 void terminate();
 
 void addPointLight();
 void removePointLight(int index);
-std::shared_ptr<PointLight> getPointLight(int index);
+const PointLight::Ptr getPointLight(int index);
 
 }
 

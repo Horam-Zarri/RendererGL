@@ -1,73 +1,63 @@
 #ifndef CUBE_H
 #define CUBE_H
 
+#include "Core/Mesh.hpp"
+#include "Core/Vertex.hpp"
 #include "Core/VertexBuffer.hpp"
 #include "Core/VertexArray.hpp"
+#include "Util/MoveOnly.hpp"
+#include "Util/Ptr.hpp"
 
-static constexpr float cubeVertices[] = {
-    -0.5f, -0.5f, -0.5f,
-     0.5f, -0.5f, -0.5f,
-     0.5f,  0.5f, -0.5f,
-     0.5f,  0.5f, -0.5f,
-    -0.5f,  0.5f, -0.5f,
-    -0.5f, -0.5f, -0.5f,
+static std::vector<Vertex> cubeVertices = {
+    Vertex {.Position = glm::vec3(-0.5f, -0.5f, -0.5f)},
+    Vertex {.Position = glm::vec3(0.5f, -0.5f, -0.5f)},
+    Vertex {.Position = glm::vec3(0.5f,  0.5f, -0.5f)},
+    Vertex {.Position = glm::vec3(0.5f,  0.5f, -0.5f)},
+    Vertex {.Position = glm::vec3(-0.5f,  0.5f, -0.5f)},
+    Vertex {.Position = glm::vec3(-0.5f, -0.5f, -0.5f)},
 
-    -0.5f, -0.5f,  0.5f,
-     0.5f, -0.5f,  0.5f,
-     0.5f,  0.5f,  0.5f,
-     0.5f,  0.5f,  0.5f,
-    -0.5f,  0.5f,  0.5f,
-    -0.5f, -0.5f,  0.5f,
+    Vertex {.Position = glm::vec3(-0.5f, -0.5f,  0.5f)},
+    Vertex {.Position = glm::vec3(0.5f, -0.5f,  0.5f)},
+    Vertex {.Position = glm::vec3(0.5f,  0.5f,  0.5f)},
+    Vertex {.Position = glm::vec3(0.5f,  0.5f,  0.5f)},
+    Vertex {.Position = glm::vec3(-0.5f,  0.5f,  0.5f)},
+    Vertex {.Position = glm::vec3(-0.5f, -0.5f,  0.5f)},
 
-    -0.5f,  0.5f,  0.5f,
-    -0.5f,  0.5f, -0.5f,
-    -0.5f, -0.5f, -0.5f,
-    -0.5f, -0.5f, -0.5f,
-    -0.5f, -0.5f,  0.5f,
-    -0.5f,  0.5f,  0.5f,
+    Vertex {.Position = glm::vec3(-0.5f,  0.5f,  0.5f)},
+    Vertex {.Position = glm::vec3(-0.5f,  0.5f, -0.5f)},
+    Vertex {.Position = glm::vec3(-0.5f, -0.5f, -0.5f)},
+    Vertex {.Position = glm::vec3(-0.5f, -0.5f, -0.5f)},
+    Vertex {.Position = glm::vec3(-0.5f, -0.5f,  0.5f)},
+    Vertex {.Position = glm::vec3(-0.5f,  0.5f,  0.5f)},
 
-     0.5f,  0.5f,  0.5f,
-     0.5f,  0.5f, -0.5f,
-     0.5f, -0.5f, -0.5f,
-     0.5f, -0.5f, -0.5f,
-     0.5f, -0.5f,  0.5f,
-     0.5f,  0.5f,  0.5f,
+    Vertex {.Position = glm::vec3(0.5f,  0.5f,  0.5f)},
+    Vertex {.Position = glm::vec3(0.5f,  0.5f, -0.5f)},
+    Vertex {.Position = glm::vec3(0.5f, -0.5f, -0.5f)},
+    Vertex {.Position = glm::vec3(0.5f, -0.5f, -0.5f)},
+    Vertex {.Position = glm::vec3(0.5f, -0.5f,  0.5f)},
+    Vertex {.Position = glm::vec3(0.5f,  0.5f,  0.5f)},
 
-    -0.5f, -0.5f, -0.5f,
-     0.5f, -0.5f, -0.5f,
-     0.5f, -0.5f,  0.5f,
-     0.5f, -0.5f,  0.5f,
-    -0.5f, -0.5f,  0.5f,
-    -0.5f, -0.5f, -0.5f,
+    Vertex {.Position = glm::vec3(-0.5f, -0.5f, -0.5f)},
+    Vertex {.Position = glm::vec3(0.5f, -0.5f, -0.5f)},
+    Vertex {.Position = glm::vec3(0.5f, -0.5f,  0.5f)},
+    Vertex {.Position = glm::vec3(0.5f, -0.5f,  0.5f)},
+    Vertex {.Position = glm::vec3(-0.5f, -0.5f,  0.5f)},
+    Vertex {.Position = glm::vec3(-0.5f, -0.5f, -0.5f)},
 
-    -0.5f,  0.5f, -0.5f,
-     0.5f,  0.5f, -0.5f,
-     0.5f,  0.5f,  0.5f,
-     0.5f,  0.5f,  0.5f,
-    -0.5f,  0.5f,  0.5f,
-    -0.5f,  0.5f, -0.5f,
+    Vertex {.Position = glm::vec3(-0.5f,  0.5f, -0.5f)},
+    Vertex {.Position = glm::vec3(0.5f,  0.5f, -0.5f)},
+    Vertex {.Position = glm::vec3(0.5f,  0.5f,  0.5f)},
+    Vertex {.Position = glm::vec3(0.5f,  0.5f,  0.5f)},
+    Vertex {.Position = glm::vec3(-0.5f,  0.5f,  0.5f)},
+    Vertex {.Position = glm::vec3(-0.5f,  0.5f, -0.5f)},
 };
 
-class Cube {
+class Cube : public Mesh {
+    MAKE_MOVE_ONLY(Cube)
+    GENERATE_PTR(Cube)
 public:
 
-    Cube() {
-        VBLayout layout;
-
-        layout.push<float>(3);
-
-        m_VBO.send_data(cubeVertices, sizeof cubeVertices);
-        m_VAO.send_data(m_VBO, layout);
-    }
-
-    void Draw() {
-        m_VAO.bind();
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        m_VAO.unbind();
-    }
-private:
-    VertexArray m_VAO;
-    VertexBuffer m_VBO;
+    Cube() : Mesh(cubeVertices) {}
 
 };
 

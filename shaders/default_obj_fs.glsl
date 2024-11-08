@@ -52,6 +52,7 @@ in VS_OUT {
     vec4 FragPosLightSpace;
 } fs_in;
 
+
 uniform sampler2D shadowMap;
 uniform bool shadowMapping;
 
@@ -61,6 +62,8 @@ uniform DirectionalLight directionalLight;
 
 uniform PointLight pointLights[NR_POINT_LIGHTS];
 uniform int pointLightsSize;
+
+uniform bool hasSpecular;
 
 uniform bool blinn;
 //uniform SpotLight spotLight;
@@ -111,13 +114,17 @@ vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir) {
     vec3 diffuse = light.diffuse * diff * vec3(texture(material.texture_diffuse, fs_in.TexCoords));
     vec3 specular = light.specular * spec * vec3(texture(material.texture_specular, fs_in.TexCoords));
 
+
     vec3 lighting;
 
     if (shadowMapping) {
         float shadow = ShadowCalculation(fs_in.FragPosLightSpace);
         lighting = (ambient + (1.0 - shadow) * (diffuse + specular));
     } else {
-        lighting = ambient + diffuse + specular;
+        if (hasSpecular)
+            lighting = ambient + diffuse + specular;
+        else
+            lighting = ambient + diffuse;
     }
 
     return lighting;
@@ -151,7 +158,10 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     diffuse *= attenuation;
     specular *= attenuation;
 
-    return (ambient + diffuse + specular);
+    if (hasSpecular)
+        return (ambient + diffuse + specular);
+    else
+        return (ambient + diffuse);
 }
 
 // calculates the color when using a spot light.

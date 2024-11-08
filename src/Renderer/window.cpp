@@ -1,5 +1,5 @@
-#include "window.hpp"
-#include "Util/callbacks.hpp"
+#include "Window.hpp"
+#include "Callbacks.hpp"
 
 #include <iostream>
 

@@ -3,6 +3,8 @@
 
 #include <vector>
 
+#include "Util/MoveOnly.hpp"
+#include "Util/Ptr.hpp"
 #include "VertexBuffer.hpp"
 
 struct VBElement {
@@ -31,7 +33,7 @@ public:
 
     template<typename T>
     void push(unsigned int count) {
-        //static_assert(false);
+        static_assert(false);
     }
 
     template<>
@@ -52,11 +54,14 @@ public:
         m_Stride += count * VBElement::getSizeOf(GL_UNSIGNED_BYTE);
     }
 
-    inline const std::vector<VBElement> elements() const {return m_Elements;}
-    inline unsigned int stride() const {return m_Stride;}
+    inline const std::vector<VBElement> getElements() const {return m_Elements;}
+    inline unsigned int getStride() const {return m_Stride;}
 };
 
 class VertexArray {
+    MAKE_MOVE_ONLY(VertexArray)
+    GENERATE_PTR(VertexArray)
+
 private:
     unsigned int m_BufferID;
 
@@ -64,24 +69,26 @@ public:
 
     VertexArray() {
         glGenVertexArrays(1, &m_BufferID);
+        bind();
     }
 
     ~VertexArray() {
+        unbind();
         glDeleteVertexArrays(1, &m_BufferID);
     }
 
-    void send_data(const VertexBuffer& vbo, VBLayout layout) {
+    void sendLayout(const VertexBuffer::Ptr& vbo, VBLayout layout) {
         bind();
-        vbo.bind();
+        vbo->bind();
         size_t offset = 0;
-        const auto& elements = layout.elements();
+        const auto& elements = layout.getElements();
 
         unsigned int lc = 0;
         for (int i = 0; i < elements.size(); i++) {
             const auto& element = elements[i];
             glEnableVertexAttribArray(lc);
             glVertexAttribPointer(lc, element.count, element.type,
-                                  element.normalized, layout.stride(), (void*)offset);
+                                  element.normalized, layout.getStride(), (void*)offset);
             offset += element.count * VBElement::getSizeOf(element.type);
             lc++;
         }

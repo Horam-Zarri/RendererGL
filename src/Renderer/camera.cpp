@@ -1,4 +1,4 @@
-#include "camera.hpp"
+#include "Camera.hpp"
 
 using namespace renderer::camera;
 
@@ -10,7 +10,7 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch):
     WorldUp = up;
     Yaw = yaw;
     Pitch = pitch;
-    update_camera_vectors();
+    updateCameraVectors();
 }
 
 Camera::Camera(
@@ -24,7 +24,7 @@ Camera::Camera(
     WorldUp = glm::vec3(upX, upY, upZ);
     Yaw = yaw;
     Pitch = pitch;
-    update_camera_vectors();
+    updateCameraVectors();
 }
 
 glm::mat4 Camera::GetViewMatrix() const
@@ -32,7 +32,7 @@ glm::mat4 Camera::GetViewMatrix() const
     return glm::lookAt(Position, Position + Front, Up);
 }
 
-void Camera::ProcessMovement(Camera_Movement direction, float deltaTime)
+void Camera::ProcessMovement(CameraMovement direction, float deltaTime)
 {
     float velocity = MovementSpeed * deltaTime;
     if (direction == FORWARD)
@@ -63,7 +63,7 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
     }
 
     // update Front, Right and Up Vectors using the updated Euler angles
-    update_camera_vectors();
+    updateCameraVectors();
 }
 
 // processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
@@ -77,7 +77,7 @@ void Camera::ProcessMouseScroll(float yoffset)
 }
 
 
-void Camera::update_camera(Camera& state, bool constrainPitch) {
+void Camera::updateCamera(Camera& state, bool constrainPitch) {
     if (constrainPitch) {
         if (state.Pitch > 89.0f)
             state.Pitch = 89.0f;
@@ -91,13 +91,13 @@ void Camera::update_camera(Camera& state, bool constrainPitch) {
     if (state.Yaw != Yaw || state.Pitch != Pitch) {
         Yaw = state.Yaw;
         Pitch = state.Pitch;
-        update_camera_vectors();
+        updateCameraVectors();
     }
 
     state = *this;
 }
 // calculates the front vector from the Camera's (updated) Euler Angles
-void Camera::update_camera_vectors()
+void Camera::updateCameraVectors()
 {
     // calculate the new Front vector
     glm::vec3 front;

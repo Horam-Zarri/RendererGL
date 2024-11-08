@@ -9,10 +9,12 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "mesh.hpp"
-#include "Core/Shader/shader.hpp"
-#include "Texture/texture.hpp"
-#include "Lighting/material.hpp"
+#include "Core/MeshGroup.hpp"
+#include "Core/Shader/Shader.hpp"
+#include "Texture/Texture.hpp"
+#include "Lighting/Material.hpp"
+#include "Util/MoveOnly.hpp"
+#include "Util/Ptr.hpp"
 
 #include <string>
 #include <iostream>
@@ -21,25 +23,23 @@
 
 
 
-class Model {
+class Model : public MeshGroup {
+    MAKE_MOVE_ONLY(Model)
+    GENERATE_PTR(Model)
+
 public:
-
-    Model(const char* path);
-    ~Model();
-
-    void Draw(Shader& shader);
+    Model(const std::string& path);
 
 private:
-    std::vector<std::unique_ptr<Mesh>> meshes;
-    std::vector<Texture> textures_loaded;
-    std::string directory;
+    std::vector<Texture::Ptr> m_TexturesLoaded;
+    std::string m_Directory;
 
     void loadModel(std::string path);
 
     void processNode(aiNode* node, const aiScene* scene);
-    std::unique_ptr<Mesh> processMesh(aiMesh* mesh, const aiScene* scene);
+    Mesh::Ptr processMesh(aiMesh* mesh, const aiScene* scene);
 
-    std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type);
+    std::vector<Texture::Ptr> loadMaterialTextures(aiMaterial* mat, aiTextureType type);
 };
 
 #endif

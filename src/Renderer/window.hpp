@@ -3,7 +3,8 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include "gui.hpp"
+#include "Gui.hpp"
+
 namespace window
 {
 

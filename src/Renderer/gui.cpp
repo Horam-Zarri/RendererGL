@@ -1,6 +1,6 @@
-#include "gui.hpp"
+#include "Gui.hpp"
 #include "imgui.h"
-#include "renderer.hpp"
+#include "Renderer.hpp"
 #include <cmath>
 #include <iostream>
 #include <string>

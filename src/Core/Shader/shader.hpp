@@ -1,6 +1,7 @@
 #ifndef SHADER_H
 #define SHADER_H
 
+#include "Util/Ptr.hpp"
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
@@ -11,6 +12,7 @@
 
 class Shader
 {
+    GENERATE_PTR(Shader)
 public:
     unsigned int ID;
     // constructor generates the shader on the fly

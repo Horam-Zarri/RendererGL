@@ -7,6 +7,9 @@
 #include "Core/VertexBuffer.hpp"
 #include "Core/VertexArray.hpp"
 
+#include "Util/MoveOnly.hpp"
+#include "Util/Ptr.hpp"
+
 static constexpr float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
     // positions   // texCoords
     -1.0f,  1.0f,  0.0f, 1.0f,
@@ -19,25 +22,32 @@ static constexpr float quadVertices[] = { // vertex attributes for a quad that f
 };
 
 class Quad {
+    MAKE_MOVE_ONLY(Quad)
+    GENERATE_PTR(Quad)
+
+private:
+    VertexArray::Ptr m_VAO;
+    VertexBuffer::Ptr m_VBO;
 public:
-    Quad() {
+    Quad()
+    {
+        m_VAO = VertexArray::New();
+        m_VBO = VertexBuffer::New();
+
         VBLayout layout;
 
         layout.push<float>(2);
         layout.push<float>(2);
 
-        m_VBO.send_data(quadVertices, sizeof quadVertices);
-        m_VAO.send_data(m_VBO, layout);
+        m_VBO->sendData(quadVertices, sizeof quadVertices);
+        m_VAO->sendLayout(m_VBO, layout);
     }
 
-    void Draw() {
-        m_VAO.bind();
+    void draw() {
+        m_VAO->bind();
         glDrawArrays(GL_TRIANGLES, 0, 6);
-        m_VAO.unbind();
+        m_VAO->unbind();
     }
-private:
-    VertexArray m_VAO;
-    VertexBuffer m_VBO;
 };
 
 #endif

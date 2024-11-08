@@ -1,41 +1,26 @@
 #ifndef MULTISAMPLE_TEXTURE
 #define MULTISAMPLE_TEXTURE
 
-#include "Texture/texture.hpp"
-#include "Renderer/renderer.hpp"
+#include "Texture/Texture.hpp"
+#include "Util/MoveOnly.hpp"
+#include "Util/Ptr.hpp"
 
 class MultisampleTexture : public Texture {
+    MAKE_MOVE_ONLY(MultisampleTexture)
+    GENERATE_PTR(MultisampleTexture)
 public:
-    MultisampleTexture() : Texture::Texture() {}
+    MultisampleTexture(unsigned int width, unsigned int height);
 
-    virtual void genColorBuffer(unsigned int width, unsigned int height) override {
+    virtual void genTexture() override;
+    void resize(unsigned int width, unsigned int height);
 
-        handle_dirty();
-
-        m_Type = TextureType::COLOR_ATTACH_MULTISAMPLE;
-
+    inline void bind() const override {
+        // Multisample does not need slot access
         glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, m_TextureID);
-
-        glTexImage2DMultisample(
-            GL_TEXTURE_2D_MULTISAMPLE,
-            renderer::g_Engine.MSAA_MULTIPLIER,
-            GL_RGB,
-            width,
-            height,
-            GL_TRUE
-        );
-
-        glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
     }
 
-    virtual void resize(unsigned int width, unsigned int height) override {
-        switch (m_Type) {
-            case TextureType::COLOR_ATTACH_MULTISAMPLE:
-                genColorBuffer(width, height);
-            break;
-            default:
-            break;
-        }
+    inline void unbind() const override {
+        glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
     }
 };
 

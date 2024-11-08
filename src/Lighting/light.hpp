@@ -1,7 +1,9 @@
 #ifndef LIGHT_H
 #define LIGHT_H
 
-#include "Core/Shader/shader.hpp"
+#include "Core/Shader/Shader.hpp"
+#include "Util/Ptr.hpp"
+
 #include <format>
 #include <glm/vec3.hpp>
 #include <stdexcept>
@@ -30,14 +32,65 @@ const std::vector<std::pair<unsigned int, Attenuation>> attenuation_table = {
     {3250, Attenuation {1.0, 0.0014,  0.000007}},
 };
 
-class DirectionalLight {
+enum class LightType {
+    None = 0,
+    Directional,
+    PointLight,
+    SpotLight,
+};
+
+class Light {
+    GENERATE_PTR(Light)
 private:
-    glm::vec3 direction;
+    glm::vec3 m_Ambient;
+    glm::vec3 m_Diffuse;
+    glm::vec3 m_Specular;
 
-    glm::vec3 ambient;
-    glm::vec3 diffuse;
-    glm::vec3 specular;
+protected:
+    LightType m_Type;
 
+    Light(
+        glm::vec3 ambient,
+        glm::vec3 diffuse,
+        glm::vec3 specular
+    ) : m_Ambient{ambient}, m_Diffuse{diffuse}, m_Specular{specular} {}
+
+    Light(
+        glm::vec3 light_color
+    ) : m_Ambient{light_color}, m_Diffuse{light_color}, m_Specular{light_color} {}
+
+    virtual ~Light() = default;
+
+public:
+
+    inline const LightType getType() const {
+        return m_Type;
+    }
+    inline const glm::vec3& getAmbient() const {
+        return m_Ambient;
+    }
+    inline const glm::vec3& getDiffuse() const {
+        return m_Diffuse;
+    }
+    inline const glm::vec3& getSpecular() const {
+        return m_Specular;
+    }
+
+    inline void setAmbient(const glm::vec3& ambient) {
+        this->m_Ambient = ambient;
+    }
+    inline void setDiffuse(const glm::vec3& diffuse) {
+        this->m_Diffuse = diffuse;
+    }
+    inline void setSpecular(const glm::vec3& specular) {
+        this->m_Specular = specular;
+    }
+};
+
+class DirectionalLight : public Light {
+    GENERATE_PTR(DirectionalLight)
+private:
+    glm::vec3 m_Direction;
 public:
 
     DirectionalLight(
@@ -45,59 +98,36 @@ public:
         glm::vec3 ambient,
         glm::vec3 diffuse,
         glm::vec3 specular
-    ) : direction{direction}, ambient{ambient},
-        diffuse{diffuse}, specular{specular} {}
+    ) : Light(ambient, diffuse, specular), m_Direction{direction}
+    {
+        m_Type = LightType::Directional;
+    }
+
 
     DirectionalLight(
         glm::vec3 direction,
         glm::vec3 light_color
-    ) : direction{direction}, ambient{light_color},
-        diffuse{light_color}, specular{light_color} {}
+    ) : Light(light_color), m_Direction{direction}
+    {
+        m_Type = LightType::Directional;
+    }
 
-    inline const glm::vec3& getDirection() const {
-        return direction;
-    }
-    inline const glm::vec3& getAmbient() const {
-        return ambient;
-    }
-    inline const glm::vec3& getDiffuse() const {
-        return diffuse;
-    }
-    inline const glm::vec3& getSpecular() const {
-        return specular;
-    }
+    virtual ~DirectionalLight() = default;
 
     inline void setDirection(const glm::vec3& direction) {
-        this->direction = direction;
-    }
-    inline void setAmbient(const glm::vec3& ambient) {
-        this->ambient = ambient;
-    }
-    inline void setDiffuse(const glm::vec3& diffuse) {
-        this->diffuse = diffuse;
-    }
-    inline void setSpecular(const glm::vec3& specular) {
-        this->specular = specular;
+        this->m_Direction = direction;
     }
 
-    void sendUniforms(Shader& shader) const {
-        shader.setVec3("directionalLight.direction", direction);
-        shader.setVec3("directionalLight.ambient", ambient);
-        shader.setVec3("directionalLight.diffuse", diffuse);
-        shader.setVec3("directionalLight.specular", specular);
+    inline const glm::vec3& getDirection() const {
+        return m_Direction;
     }
-
 };
 
-class PointLight {
+class PointLight : public Light {
+    GENERATE_PTR(PointLight)
 protected:
-    glm::vec3 position;
-
-    Attenuation attenuation;
-
-    glm::vec3 ambient;
-    glm::vec3 diffuse;
-    glm::vec3 specular;
+    glm::vec3 m_Position;
+    Attenuation m_Attenuation;
 
     Attenuation dist_to_atten(unsigned int distance) {
         Attenuation near, far;
@@ -141,8 +171,11 @@ public:
         glm::vec3 ambient,
         glm::vec3 diffuse,
         glm::vec3 specular
-    ) : position{position}, attenuation{attenuation},
-        ambient{ambient}, diffuse{diffuse}, specular{specular} {}
+    ) : Light(ambient, diffuse, specular),
+        m_Position{position}, m_Attenuation{attenuation}
+    {
+        m_Type = LightType::PointLight;
+    }
 
     PointLight(
         glm::vec3 position,
@@ -150,101 +183,69 @@ public:
         glm::vec3 ambient,
         glm::vec3 diffuse,
         glm::vec3 specular
-    ) : position{position}, ambient{ambient},
-        diffuse{diffuse}, specular{specular}
+    ) : Light(ambient, diffuse, specular), m_Position{position}
     {
+        m_Type = LightType::PointLight;
+
         // TODO: do something with magic numbers
         if (distance < 7 || distance > 3250) {
             std::cerr << "Point light distance should be >=7, <=3250";
             std::exit(7);
         }
 
-        attenuation = dist_to_atten(distance);
+        m_Attenuation = dist_to_atten(distance);
     }
 
     PointLight(
         glm::vec3 position,
         Attenuation attenuation,
         glm::vec3 light_color
-    ) : position{position}, attenuation{attenuation}, ambient{light_color},
-        diffuse{light_color}, specular{light_color}  {}
+    ) : Light(light_color), m_Position{position}, m_Attenuation{attenuation}
+    {
+        m_Type = LightType::PointLight;
+    }
 
     PointLight(
         glm::vec3 position,
         unsigned int distance,
         glm::vec3 light_color
-    ) : position{position}, ambient{light_color},
-        diffuse{light_color}, specular{light_color}
+    ) : Light(light_color), m_Position{position}
     {
+        m_Type = LightType::PointLight;
         if (distance < 7 || distance > 3250) {
             std::cerr << "Point light distance should be >=7, <=3250";
             std::exit(7);
         }
 
-        attenuation = dist_to_atten(distance);
+        m_Attenuation = dist_to_atten(distance);
 
-        std::cout << "CALCULATED_ATTENUATION" << attenuation.linear << " " <<
-            attenuation.quadratic << std::endl;
+        std::cout << "CALCULATED_ATTENUATION" << m_Attenuation.linear << " " <<
+            m_Attenuation.quadratic << std::endl;
     }
+
+    virtual ~PointLight() = default;
 
     inline const glm::vec3& getPosition() const {
-        return position;
+        return m_Position;
     }
-
-    inline const glm::vec3& getAmbient() const {
-        return ambient;
-    }
-
-    inline const glm::vec3& getDiffuse() const {
-        return diffuse;
-    }
-
-    inline const glm::vec3& getSpecular() const {
-        return specular;
-    }
-
     inline const Attenuation& getAttenuation() const {
-        return attenuation;
+        return m_Attenuation;
     }
     inline void setPosition(const glm::vec3& position) {
-        this->position = position;
+        this->m_Position = position;
     }
 
     inline void setAttenuation(const Attenuation attenuation) {
-        this->attenuation = attenuation;
+        this->m_Attenuation = attenuation;
     }
 
     inline void setDistance(const unsigned int distance) {
-        this->attenuation = dist_to_atten(distance);
-    }
-
-    inline void setAmbient(const glm::vec3& ambient) {
-        this->ambient = ambient;
-    }
-
-    inline void setDiffuse(const glm::vec3& diffuse) {
-        this->diffuse = diffuse;
-    }
-
-    inline void setSpecular(const glm::vec3& specular) {
-        this->specular = specular;
-    }
-
-    void sendUniforms(Shader& shader, int slot) const {
-        std::string ubase = "pointLights[" + std::to_string(slot) + "]";
-
-        shader.setVec3(ubase + ".position", position);
-        shader.setVec3(ubase + ".ambient", ambient);
-        shader.setVec3(ubase + ".diffuse", diffuse);
-        shader.setVec3(ubase + ".specular", specular);
-
-        shader.setFloat(ubase + ".constant", attenuation.constant);
-        shader.setFloat(ubase + ".linear", attenuation.linear);
-        shader.setFloat(ubase + ".quadratic", attenuation.quadratic);
+        this->m_Attenuation = dist_to_atten(distance);
     }
 };
 
 class SpotLight : public PointLight {
+    GENERATE_PTR(SpotLight)
 private:
     glm::vec3 direction;
     float cut_off;
@@ -262,7 +263,10 @@ public:
         float cut_off,
         float outer_cut_off
     ) : PointLight(position, attenuation, ambient, diffuse, specular),
-        direction{direction}, cut_off{cut_off}, outer_cut_off{outer_cut_off} {}
+        direction{direction}, cut_off{cut_off}, outer_cut_off{outer_cut_off}
+    {
+        m_Type = LightType::SpotLight;
+    }
 
 
     SpotLight(
@@ -275,7 +279,10 @@ public:
         float cut_off,
         float outer_cut_off
     ) : PointLight(position, distance, ambient, diffuse, specular),
-        direction{direction}, cut_off{cut_off}, outer_cut_off{outer_cut_off} {}
+        direction{direction}, cut_off{cut_off}, outer_cut_off{outer_cut_off}
+    {
+        m_Type = LightType::SpotLight;
+    }
 
 
     SpotLight(
@@ -286,8 +293,12 @@ public:
         float cut_off,
         float outer_cut_off
     ) : PointLight(position, attenuation, light_color),
-        direction{direction}, cut_off{cut_off}, outer_cut_off{outer_cut_off} {}
+        direction{direction}, cut_off{cut_off}, outer_cut_off{outer_cut_off}
+    {
+        m_Type = LightType::SpotLight;
+    }
 
+    virtual ~SpotLight() = default;
 };
 
 #endif
