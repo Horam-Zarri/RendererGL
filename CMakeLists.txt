@@ -3,7 +3,7 @@ cmake_minimum_required( VERSION 3.10 )
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-project(RendererGL)
+project(GLRenderer)
 
 find_package(OpenGL REQUIRED)
 
@@ -59,9 +59,9 @@ file (GLOB SOURCES
 )
 
 
-add_executable(RendererGL ${SOURCES})
+add_executable(GLRenderer ${SOURCES})
 
-target_link_libraries(RendererGL
+target_link_libraries(GLRenderer
     ${GLFW_LIBS}
     glm::glm
     assimp
