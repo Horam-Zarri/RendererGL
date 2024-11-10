@@ -28,6 +28,7 @@
 #include "Skybox.hpp"
 #include "Window.hpp"
 #include "glm/ext/matrix_clip_space.hpp"
+#include "glm/geometric.hpp"
 
 #include <memory>
 #include <ostream>
@@ -143,7 +144,7 @@ void renderScenes() {
                 glm::mat4 model = scene->getModelMatrix() * mesh->getModelMatrix();
                 model = glm::translate(model, g_Engine.OBJECT_POS);
 
-                //shaderPhong->setMat4("model", model);
+                shaderPhong->setMat4("model", model);
 
                 bool hasDiffuse = false, hasSpecular = false;
 
@@ -173,18 +174,20 @@ void renderScenes() {
                 shaderPhong->setBool("hasSpecular", hasSpecular);
 
                 const auto& material = mesh->getMaterial();
-                MaterialType mat_type = material->getType();
 
-                if (mat_type == MaterialType::Solid) {
-                    BasicMaterial::Ptr basic_mat = std::dynamic_pointer_cast<BasicMaterial>(material);
-                    shaderDefault->setVec3("obj_color", basic_mat->getObjColor());
-                }
-                else if (mat_type == MaterialType::Phong) {
-                    PhongMaterial::Ptr phong_mat = std::dynamic_pointer_cast<PhongMaterial>(material);
-                    shaderPhong->setVec3("material.ambient", phong_mat->getAmbient());
-                    shaderPhong->setVec3("material.diffuse", phong_mat->getDiffuse());
-                    shaderPhong->setVec3("material.specular", phong_mat->getSpecular());
-                    shaderPhong->setFloat("material.shininess", phong_mat->getShininess());
+                if (material != nullptr) {
+                    MaterialType mat_type = material->getType();
+                    if (mat_type == MaterialType::Solid) {
+                        BasicMaterial::Ptr basic_mat = std::dynamic_pointer_cast<BasicMaterial>(material);
+                        shaderDefault->setVec3("obj_color", basic_mat->getObjColor());
+                    }
+                    else if (mat_type == MaterialType::Phong) {
+                        PhongMaterial::Ptr phong_mat = std::dynamic_pointer_cast<PhongMaterial>(material);
+                        shaderPhong->setVec3("material.ambient", phong_mat->getAmbient());
+                        shaderPhong->setVec3("material.diffuse", phong_mat->getDiffuse());
+                        shaderPhong->setVec3("material.specular", phong_mat->getSpecular());
+                        shaderPhong->setFloat("material.shininess", phong_mat->getShininess());
+                    }
                 }
 
                 mesh->draw();
@@ -213,9 +216,11 @@ void offscrPass() {
     glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
     glEnable(GL_DEPTH_TEST);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     // Draw Models
     //offscr_shader->use();
-    sendOffscrUniforms();
 
     if (g_Engine.MSAA_ENBL)
         fboOffscrMSAA->bind();
@@ -235,7 +240,7 @@ void offscrPass() {
 
     glm::mat4 md(1.0f);
     md = glm::translate(md, g_Engine.OBJECT_POS);
-    md = glm::scale(md, glm::vec3(0.01f));
+    //md = glm::scale(md, glm::vec3(0.01f));
 
     shaderPhong->setMat4("model", md);
 
@@ -314,10 +319,10 @@ void shadowPass() {
 
     if (!shadowMapping) return;
 
-    float near_plane = 0.1f, far_plane = 17.5f;
-    glm::mat4 lightProj = glm::ortho(-10.f, 10.f, -10.f, 10.f, near_plane, far_plane);
+    float near_plane = 0.1f, far_plane = 7.5f;
+    glm::mat4 lightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
     glm::mat4 lightView = glm::lookAt(
-        g_SunLight->getDirection(),
+        -g_SunLight->getDirection(),
         glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(0.0, 1.0, 0.0)
     );
@@ -405,10 +410,8 @@ void render() {
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // shadow_map_shader->use();
-    // shadowPass();
 
-
+    shaderShadow->use();
     shadowPass();
 
 
@@ -461,11 +464,36 @@ int init() {
 
     MeshGroup::Ptr test_sm = MeshGroup::New();
     const Plane::Ptr plane = Plane::New();
+    const Texture::Ptr wood_tex = Texture::New("./tex/wood.png");
+
+    const Cube::Ptr cb1 = Cube::New();
+    const Cube::Ptr cb2 = Cube::New();
+    const Cube::Ptr cb3 = Cube::New();
+
+    cb1->translate(glm::vec3(0.0f, 1.5f, 0.0f));
+    cb1->scale(glm::vec3(0.5));
+
+    cb2->translate(glm::vec3(2.0f, 0.0f, 1.0f));
+    cb2->scale(glm::vec3(0.5));
+
+    cb3->translate(glm::vec3(-1.0f, 0.0f, 2.0f));
+    cb3->rotate(60.0f, glm::normalize(glm::vec3(1.0f, 0.0f, -1.0f)));
+    cb3->scale(glm::vec3(0.25));
+
 
     test_sm->addMesh(plane);
+    test_sm->addMesh(cb1);
+    test_sm->addMesh(cb2);
+    test_sm->addMesh(cb3);
 
-    scene->addGroup(model);
-    //scene->addGroup(test_sm);
+    plane->addTexture(wood_tex);
+
+    cb1->addTexture(wood_tex);
+    cb2->addTexture(wood_tex);
+    cb3->addTexture(wood_tex);
+
+    //scene->addGroup(model);
+    scene->addGroup(test_sm);
 
     g_Scenes.push_back(scene);
 
