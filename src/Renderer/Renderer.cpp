@@ -20,6 +20,7 @@
 #include "Texture/Texture.hpp"
 #include "Texture/MultisampleTexture.hpp"
 #include "Lighting/Light.hpp"
+#include "Lighting/Material.hpp"
 
 #include "Skybox.hpp"
 #include "Window.hpp"
@@ -113,110 +114,38 @@ void sendOffscrUniforms() {
 
 }
 
-void sendPostprocessUniforms() {
+void sendLightUniforms(const Shader::Ptr& shader) {
+    shader->use();
 
-    shaderPostProcess->setInt("screenTexture", 0);
-    shaderPostProcess->setBool("gamma", true);
+    shader->setBool("blinn", g_Engine.BLINN_ENBL);
+    shader->setInt("pointLightsSize", g_Lights.size());
 
-    //pp_shader->setInt("screenTexture", 0);
-
-    shaderPostProcess->setBool("sharpen", g_Engine.SHARPNESS_ENBL);
-    shaderPostProcess->setFloat("sharpness", g_Engine.SHARPNESS_AMOUNT);
-
-    shaderPostProcess->setBool("blur", g_Engine.BLUR_ENBL);
-    shaderPostProcess->setBool("grayscale", g_Engine.GRAYSCALE_ENBL);
-
-    texOffscr->setSlot(TEXTURE_SLOT_SCREEN);
-    texOffscr->bind();
-    //offscr_tex.bind(0);
-}
-
-void offscrPass() {
-    glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-
-    glEnable(GL_DEPTH_TEST);
-    // Draw Models
-    //offscr_shader->use();
-    sendOffscrUniforms();
-
-    if (g_Engine.MSAA_ENBL)
-        fboOffscrMSAA->bind();
-    else
-        fboOffscr->bind();
-
-
-    glClearColor(g_Engine.CLEAR_COLOR.r,g_Engine.CLEAR_COLOR.g, g_Engine.CLEAR_COLOR.b, g_Engine.CLEAR_COLOR.a); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glm::mat4 view = camera::g_Camera.GetViewMatrix();
-    glm::mat4 proj = glm::perspective(camera::g_Camera.Fov(), ASPECT_RATIO,
-                                      g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE);
-
-
-    // TODO: THIS IS SO DIRTY
-    shaderPhong->use();
-
-    shaderPhong->setInt("pointLightsSize", g_Lights.size());
     for (unsigned int i = 0; i < g_Lights.size(); ++i) {
         PointLight::Ptr pl = std::dynamic_pointer_cast<PointLight, Light>(g_Lights[i]);
 
         std::string base = "pointLights[" + std::to_string(i) + "]";
-        shaderPhong->setVec3(base + ".position", pl->getPosition());
+        shader->setVec3(base + ".position", pl->getPosition());
 
-        std::cout << "AMBIENT: " << pl->getAmbient().x << std::endl;
-
-        shaderPhong->setVec3(base + ".ambient", pl->getAmbient());
-        shaderPhong->setVec3(base + ".diffuse", pl->getDiffuse());
-        shaderPhong->setVec3(base + ".specular", pl->getPosition());
+        shader->setVec3(base + ".ambient", pl->getAmbient());
+        shader->setVec3(base + ".diffuse", pl->getDiffuse());
+        shader->setVec3(base + ".specular", pl->getPosition());
 
         Attenuation atten = pl->getAttenuation();
 
-        shaderPhong->setFloat(base + ".constant", atten.constant);
-        shaderPhong->setFloat(base + ".linear", atten.linear);
-        shaderPhong->setFloat(base + ".quadratic", atten.quadratic);
+        shader->setFloat(base + ".constant", atten.constant);
+        shader->setFloat(base + ".linear", atten.linear);
+        shader->setFloat(base + ".quadratic", atten.quadratic);
     }
 
-    shaderPhong->setInt("material.shininess", 32);
+    shader->setInt("material.shininess", 32);
 
-    shaderPhong->setVec3("directionalLight.direction", g_SunLight->getDirection());
-    shaderPhong->setVec3("directionalLight.ambient", g_SunLight->getAmbient());
-    shaderPhong->setVec3("directionalLight.diffuse", g_SunLight->getDiffuse());
-    shaderPhong->setVec3("directionalLight.specular", g_SunLight->getSpecular());
+    shader->setVec3("directionalLight.direction", g_SunLight->getDirection());
+    shader->setVec3("directionalLight.ambient", g_SunLight->getAmbient());
+    shader->setVec3("directionalLight.diffuse", g_SunLight->getDiffuse());
+    shader->setVec3("directionalLight.specular", g_SunLight->getSpecular());
+}
 
-    shaderPhong->setBool("blinn", g_Engine.BLINN_ENBL);
-    shaderPhong->setVec3("viewPos", camera::g_Camera.Position);
-
-    glm::mat4 md(1.0f);
-    md = glm::translate(md, g_Engine.OBJECT_POS);
-    md = glm::scale(md, glm::vec3(0.01f));
-
-    shaderPhong->setMat4("model", md);
-    shaderPhong->setMat4("view", view);
-    shaderPhong->setMat4("projection", proj);
-
-    for (const Scene::Ptr& scene : g_Scenes) {
-        for (const MeshGroup::Ptr& mesh_group : scene->getMeshGroups()) {
-            for (const Mesh::Ptr& mesh : mesh_group->getMeshes()) {
-
-                for (const auto& tx : mesh->getTextures()) {
-                    tx->bind();
-                }
-
-                mesh->draw();
-            }
-        }
-    }
-
-    // Draw skybox
-
-    shaderSkybox->use();
-    shaderSkybox->setMat4("view", glm::mat4(glm::mat3(view)));
-    shaderSkybox->setMat4("projection", proj);
-
-    skybox->draw();
-
-    // Draw Lights
-
+void sendLightCubeUniforms(const Shader::Ptr& shader) {
     // light cubes should be always visible
     glDisable(GL_DEPTH_TEST);
 
@@ -243,7 +172,118 @@ void offscrPass() {
         }
     }
 
+    // crucial to re enable depth test after light cubes draw
     glEnable(GL_DEPTH_TEST);
+}
+
+void renderScenes() {
+    shaderPhong->use();
+
+    for (const Scene::Ptr& scene : g_Scenes) {
+        for (const MeshGroup::Ptr& mesh_group : scene->getMeshGroups()) {
+            for (const Mesh::Ptr& mesh : mesh_group->getMeshes()) {
+
+                glm::mat4 model = scene->getModelMatrix() * mesh->getModelMatrix();
+                model = glm::translate(model, g_Engine.OBJECT_POS);
+
+                //shaderPhong->setMat4("model", model);
+
+                bool hasDiffuse = false, hasSpecular = false;
+
+                for (const auto& texture : mesh->getTextures()) {
+
+                    unsigned int slot = 0;
+
+                    switch (texture->getType()) {
+                        case TextureType::Diffuse:
+                            slot = TEXTURE_SLOT_DIFFUSE;
+                            hasDiffuse = true;
+                            break;
+                        case TextureType::Specular:
+                            slot = TEXTURE_SLOT_SPECULAR;
+                            hasSpecular = true;
+                            break;
+                        default:
+                            break;
+                    }
+
+                    texture->setSlot(slot);
+                    texture->bind();
+                }
+
+
+                shaderPhong->setBool("hasDiffuse", hasDiffuse);
+                shaderPhong->setBool("hasSpecular", hasSpecular);
+
+                const auto& material = mesh->getMaterial();
+                MaterialType mat_type = material->getType();
+
+                if (mat_type == MaterialType::Solid) {
+                    BasicMaterial::Ptr basic_mat = std::dynamic_pointer_cast<BasicMaterial>(material);
+                    shaderDefault->setVec3("obj_color", basic_mat->getObjColor());
+                }
+                else if (mat_type == MaterialType::Phong) {
+                    PhongMaterial::Ptr phong_mat = std::dynamic_pointer_cast<PhongMaterial>(material);
+                    shaderPhong->setVec3("material.ambient", phong_mat->getAmbient());
+                    shaderPhong->setVec3("material.diffuse", phong_mat->getDiffuse());
+                    shaderPhong->setVec3("material.specular", phong_mat->getSpecular());
+                    shaderPhong->setFloat("material.shininess", phong_mat->getShininess());
+                }
+
+                mesh->draw();
+            }
+        }
+    }
+}
+
+void offscrPass() {
+    glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+
+    glEnable(GL_DEPTH_TEST);
+    // Draw Models
+    //offscr_shader->use();
+    sendOffscrUniforms();
+
+    if (g_Engine.MSAA_ENBL)
+        fboOffscrMSAA->bind();
+    else
+        fboOffscr->bind();
+
+
+    glClearColor(g_Engine.CLEAR_COLOR.r,g_Engine.CLEAR_COLOR.g, g_Engine.CLEAR_COLOR.b, g_Engine.CLEAR_COLOR.a); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glm::mat4 view = camera::g_Camera.GetViewMatrix();
+    glm::mat4 proj = glm::perspective(camera::g_Camera.Fov(), ASPECT_RATIO,
+                                      g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE);
+
+
+    // Draw main scene
+
+    glm::mat4 md(1.0f);
+    md = glm::translate(md, g_Engine.OBJECT_POS);
+    md = glm::scale(md, glm::vec3(0.01f));
+
+    shaderPhong->setMat4("model", md);
+    shaderPhong->setMat4("view", view);
+    shaderPhong->setMat4("projection", proj);
+
+    shaderPhong->setVec3("viewPos", camera::g_Camera.Position);
+
+    sendLightUniforms(shaderPhong);
+    renderScenes();
+
+    // Draw skybox
+
+    shaderSkybox->use();
+    shaderSkybox->setMat4("view", glm::mat4(glm::mat3(view)));
+    shaderSkybox->setMat4("projection", proj);
+
+    skybox->draw();
+
+    // Draw lights
+
+    sendLightCubeUniforms(shaderDefault);
 
     if (g_Engine.MSAA_ENBL)
         fboOffscrMSAA->blitTo(fboOffscr, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
@@ -314,6 +354,24 @@ void setupShadowPass() {
     //        std::endl;
 
     //shadow_fbo->unbind();
+}
+
+void sendPostprocessUniforms() {
+
+    shaderPostProcess->setInt("screenTexture", 0);
+    shaderPostProcess->setBool("gamma", true);
+
+    //pp_shader->setInt("screenTexture", 0);
+
+    shaderPostProcess->setBool("sharpen", g_Engine.SHARPNESS_ENBL);
+    shaderPostProcess->setFloat("sharpness", g_Engine.SHARPNESS_AMOUNT);
+
+    shaderPostProcess->setBool("blur", g_Engine.BLUR_ENBL);
+    shaderPostProcess->setBool("grayscale", g_Engine.GRAYSCALE_ENBL);
+
+    texOffscr->setSlot(TEXTURE_SLOT_SCREEN);
+    texOffscr->bind();
+    //offscr_tex.bind(0);
 }
 
 void postprocessPass() {
