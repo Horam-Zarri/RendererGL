@@ -76,8 +76,11 @@ void settings_panel() {
     if (ImGui::TreeNode("Lighting")) {
 
         ImGui::SeparatorText("General");
-
         ImGui::Checkbox("Enable Blinn", (bool*)&ENGINE_STATE.BLINN_ENBL);
+
+        ImGui::SeparatorText("Shadows");
+        ImGui::Checkbox("Shadow mapping", (bool*)&ENGINE_STATE.SHADOW_ENBL);
+
 
         ImGui::SeparatorText("Directional Light");
 

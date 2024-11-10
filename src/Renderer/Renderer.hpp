@@ -91,16 +91,20 @@ struct EngineState {
 
         MSAA_MULTIPLIER = 4;
 
-        SHADOW_ENBL = false;
+        SHADOW_ENBL = true;
         SHADOW_WIDTH = SHADOW_HEIGHT = 1024;
     }
 };
 
+// Texture slots for shaderPhong
 constexpr static unsigned int TEXTURE_SLOT_DIFFUSE = 0;
 constexpr static unsigned int TEXTURE_SLOT_SPECULAR = 1;
+constexpr static unsigned int TEXTURE_SLOT_SHADOW = 2;
 
+// Texture slots for shaderPostProcess
 constexpr static unsigned int TEXTURE_SLOT_SCREEN = 0;
 
+// Texture slots for shaderSkybox
 constexpr static unsigned int TEXTURE_SLOT_SKYBOX = 0;
 
 constexpr static float ASPECT_RATIO = 16.0 / 9.0;

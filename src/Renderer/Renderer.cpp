@@ -10,13 +10,16 @@
 #include <glm/vec3.hpp>
 
 #include "Core/FrameBuffer.hpp"
+#include "Core/MeshGroup.hpp"
 #include "Core/RenderBuffer.hpp"
 #include "Core/Shader/Shader.hpp"
 #include "Core/Shapes/Cube.hpp"
+#include "Core/Shapes/Plane.hpp"
 #include "Core/Shapes/Quad.hpp"
 
 #include "Model/Model.hpp"
 
+#include "Texture/DepthBufferTexture.hpp"
 #include "Texture/Texture.hpp"
 #include "Texture/MultisampleTexture.hpp"
 #include "Lighting/Light.hpp"
@@ -66,53 +69,6 @@ Cube::Ptr pointLightsCube;
 
 Skybox::Ptr skybox;
 
-// if MSAA is enabled we draw to msaa_fbo then blit to offscr_fbo
-
-
-
-void sendShadowMapUniforms() {
-
-    //bool shadow_mapping = g_Engine.SHADOW_ENBL;
-
-    //shadow_map_shader->setBool("shadowMapping", shadow_mapping);
-
-    //if (!shadow_mapping) return;
-
-    //float near_plane = 0.1f, far_plane = 17.5f;
-    //glm::mat4 lightProj = glm::ortho(-10.f, 10.f, -10.f, 10.f, near_plane, far_plane);
-    //glm::mat4 lightView = glm::lookAt(
-    //    -dir_light->getDirection(),
-    //    glm::vec3(0.0f, 0.0f, 0.0f),
-    //    glm::vec3(0.0, 1.0, 0.0)
-    //);
-
-    //glm::mat4 lightSpaceMatrix = lightProj * lightView;
-
-    //shadow_map_shader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
-}
-
-void sendOffscrUniforms() {
-    //glm::mat4 md = glm::mat4(1.0f);
-    //md = glm::translate(md, g_Engine.OBJECT_POS);
-    //md = glm::scale(md, glm::vec3(0.01));
-    //md = glm::rotate(md, glm::radians(0.0f), glm::vec3(1.0, 0.0, 0.0));
-    //offscr_shader->setMat4("model", md);
-    //offscr_shader->setMat4("view", camera::g_Camera.GetViewMatrix());
-    //offscr_shader->setMat4("projection", glm::perspective(glm::radians(camera::g_Camera.Zoom),
-    //                                                      ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE));
-    //offscr_shader->setVec3("viewPos", camera::g_Camera.Position);
-
-    //offscr_shader->setBool("blinn", g_Engine.BLINN_ENBL);
-
-    //// lights
-    //dir_light->sendUniforms(*offscr_shader);
-
-    //offscr_shader->setInt("pointLightsSize", point_lights.size());
-    //for (unsigned int i = 0; i < point_lights.size(); i++) {
-    //    point_lights[i]->sendUniforms(*offscr_shader, i);
-    //}
-
-}
 
 void sendLightUniforms(const Shader::Ptr& shader) {
     shader->use();
@@ -178,6 +134,7 @@ void sendLightCubeUniforms(const Shader::Ptr& shader) {
 
 void renderScenes() {
     shaderPhong->use();
+    texShadowmap->bind();
 
     for (const Scene::Ptr& scene : g_Scenes) {
         for (const MeshGroup::Ptr& mesh_group : scene->getMeshGroups()) {
@@ -236,6 +193,22 @@ void renderScenes() {
     }
 }
 
+void renderScenesDepth() {
+    shaderShadow->use();
+
+    for (const Scene::Ptr& scene : g_Scenes) {
+        for (const MeshGroup::Ptr& mesh_group : scene->getMeshGroups()) {
+            for (const Mesh::Ptr& mesh : mesh_group->getMeshes()) {
+
+                glm::mat4 model = scene->getModelMatrix() * mesh->getModelMatrix();
+                model = glm::translate(model, g_Engine.OBJECT_POS);
+
+                mesh->draw();
+            }
+        }
+    }
+}
+
 void offscrPass() {
     glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
@@ -265,6 +238,10 @@ void offscrPass() {
     md = glm::scale(md, glm::vec3(0.01f));
 
     shaderPhong->setMat4("model", md);
+
+    // TODO: need to explain?
+    shaderShadow->setMat4("model", md);
+
     shaderPhong->setMat4("view", view);
     shaderPhong->setMat4("projection", proj);
 
@@ -325,35 +302,53 @@ void setupOffscrPass() {
 }
 
 void shadowPass() {
-    //shadow_fbo->bind();
-    //glViewport(0, 0, g_Engine.SHADOW_WIDTH, g_Engine.SHADOW_HEIGHT);
+    glViewport(0, 0, g_Engine.SHADOW_WIDTH, g_Engine.SHADOW_HEIGHT);
+    glEnable(GL_DEPTH_TEST);
 
-    //sendShadowMapUniforms();
+    fboShadow->bind();
 
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    bool shadowMapping = g_Engine.SHADOW_ENBL;
+    shaderPhong->setBool("hasShadow", shadowMapping);
+
+    if (!shadowMapping) return;
+
+    float near_plane = 0.1f, far_plane = 17.5f;
+    glm::mat4 lightProj = glm::ortho(-10.f, 10.f, -10.f, 10.f, near_plane, far_plane);
+    glm::mat4 lightView = glm::lookAt(
+        g_SunLight->getDirection(),
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(0.0, 1.0, 0.0)
+    );
+
+    glm::mat4 lightSpaceMatrix = lightProj * lightView;
+
+    shaderShadow->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+    shaderPhong->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+    renderScenesDepth();
+
+    fboShadow->unbind();
 }
 
 void setupShadowPass() {
 
     fboShadow = FrameBuffer::New();
+    texShadowmap = DepthBufferTexture::New(g_Engine.SHADOW_WIDTH, g_Engine.SHADOW_HEIGHT);
+    texShadowmap->setSlot(TEXTURE_SLOT_SHADOW);
 
-    // What should we do?
-    //shadow_fbo = std::make_unique<Framebuffer>();
+    fboShadow->attachTexture(GL_DEPTH_ATTACHMENT, texShadowmap);
 
-    //shadow_tex.init();
-    //shadow_tex.genDepthBuffer(g_Engine.SHADOW_WIDTH, g_Engine.SHADOW_HEIGHT);
 
-    //shadow_fbo->attachTexture(GL_DEPTH_ATTACHMENT, shadow_tex);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
 
-    //shadow_fbo->bind();
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Shadow map Framebuffer is not complete!" <<
+            std::endl;
 
-    //glDrawBuffer(GL_NONE);
-    //glReadBuffer(GL_NONE);
-
-    //if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    //    std::cout << "ERROR::FRAMEBUFFER:: Shadow map Framebuffer is not complete!" <<
-    //        std::endl;
-
-    //shadow_fbo->unbind();
+    fboShadow->unbind();
 }
 
 void sendPostprocessUniforms() {
@@ -413,6 +408,10 @@ void render() {
     // shadow_map_shader->use();
     // shadowPass();
 
+
+    shadowPass();
+
+
     shaderPhong->use();
     offscrPass();
 
@@ -450,15 +449,23 @@ int init() {
     shaderShadow = Shader::New("./shaders/shadow_map_vs.glsl", "./shaders/shadow_map_fs.glsl");
 
     shaderPhong->setInt("pointLightsSize", 0);
-
-    shaderPhong->setInt("material.texture_diffuse", 0);
-    shaderPhong->setInt("material.texture_specular", 1);
+    shaderPhong->setInt("materialMaps.diffuse", TEXTURE_SLOT_DIFFUSE);
+    shaderPhong->setInt("materialMaps.specular", TEXTURE_SLOT_SPECULAR);
+    shaderPhong->setInt("materialMaps.shadow", TEXTURE_SLOT_SHADOW);
 
     shaderSkybox->setInt("skybox", TEXTURE_SLOT_SKYBOX);
 
     Scene::Ptr scene = Scene::New();
+
     MeshGroup::Ptr model = Model::New("./assets/Sponza/glTF/Sponza.gltf");
+
+    MeshGroup::Ptr test_sm = MeshGroup::New();
+    const Plane::Ptr plane = Plane::New();
+
+    test_sm->addMesh(plane);
+
     scene->addGroup(model);
+    //scene->addGroup(test_sm);
 
     g_Scenes.push_back(scene);
 
@@ -539,6 +546,9 @@ void updateState() {
         g_Engine.GRAYSCALE_ENBL = ENGINE_STATE.GRAYSCALE_ENBL;
 
 
+    if (g_Engine.SHADOW_ENBL != ENGINE_STATE.SHADOW_ENBL)
+        g_Engine.SHADOW_ENBL = ENGINE_STATE.SHADOW_ENBL;
+
     // must update msaa before resizing
     if (g_Engine.MSAA_ENBL != ENGINE_STATE.MSAA_ENBL)
         g_Engine.MSAA_ENBL = ENGINE_STATE.MSAA_ENBL;
@@ -562,13 +572,6 @@ void updateState() {
     }
 
     if (regen_buffers) {
-        // TODO: resize
-        //msaa_tex.resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-        //msaa_rbo->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-
-        //offscr_tex.resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-        //offscr_rbo->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-
         texOffscrMSAA->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
         rboOffscrMSAA->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 

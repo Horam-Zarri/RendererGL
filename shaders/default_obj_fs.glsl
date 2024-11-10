@@ -11,6 +11,7 @@ struct MaterialSolid {
 struct MaterialTexture {
     sampler2D diffuse;
     sampler2D specular;
+    sampler2D shadow;
 };
 
 struct DirectionalLight {
@@ -60,8 +61,6 @@ in VS_OUT {
 } fs_in;
 
 
-uniform sampler2D shadowMap;
-uniform bool shadowMapping;
 
 uniform vec3 viewPos;
 
@@ -75,6 +74,7 @@ uniform int pointLightsSize;
 
 uniform bool hasDiffuse;
 uniform bool hasSpecular;
+uniform bool hasShadow;
 
 uniform bool blinn;
 //uniform SpotLight spotLight;
@@ -140,7 +140,7 @@ vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir) {
 
     vec3 lighting;
 
-    if (shadowMapping) {
+    if (hasShadow) {
         float shadow = ShadowCalculation(fs_in.FragPosLightSpace);
         lighting = (ambient + (1.0 - shadow) * (diffuse + specular));
     } else {
@@ -226,7 +226,7 @@ float ShadowCalculation(vec4 fragPosLightSpace) {
 
     projCoords = projCoords * 0.5 + 0.5;
 
-    float closestDepth = texture(shadowMap, projCoords.xy).r;
+    float closestDepth = texture(materialMaps.shadow, projCoords.xy).r;
     float currentDepth = projCoords.z;
 
     float shadow = currentDepth > closestDepth ? 1.0 : 0.0;
