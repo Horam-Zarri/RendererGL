@@ -27,7 +27,7 @@ public:
     {}
 
     ~Scene() = default;
-    inline void addGroup(MeshGroup::Ptr& mesh_group) { m_MeshGroups.push_back(mesh_group); }
+    inline void addGroup(const MeshGroup::Ptr& mesh_group) { m_MeshGroups.push_back(mesh_group); }
     inline void removeGroup(int index) { m_MeshGroups.erase(m_MeshGroups.begin() + index); }
 
     inline const std::vector<MeshGroup::Ptr>& getMeshGroups() { return m_MeshGroups; }

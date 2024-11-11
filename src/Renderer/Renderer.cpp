@@ -5,9 +5,9 @@
 
 #include <array>
 
-#include <glm/ext/matrix_transform.hpp>
-#include <glm/trigonometric.hpp>
-#include <glm/vec3.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "Core/FrameBuffer.hpp"
 #include "Core/MeshGroup.hpp"
@@ -27,8 +27,6 @@
 
 #include "Skybox.hpp"
 #include "Window.hpp"
-#include "glm/ext/matrix_clip_space.hpp"
-#include "glm/geometric.hpp"
 
 #include <memory>
 #include <ostream>
@@ -70,6 +68,8 @@ Cube::Ptr pointLightsCube;
 
 Skybox::Ptr skybox;
 
+
+static glm::mat4 lightSpaceMatrix;
 
 void sendLightUniforms(const Shader::Ptr& shader) {
     shader->use();
@@ -141,8 +141,8 @@ void renderScenes() {
         for (const MeshGroup::Ptr& mesh_group : scene->getMeshGroups()) {
             for (const Mesh::Ptr& mesh : mesh_group->getMeshes()) {
 
-                glm::mat4 model = scene->getModelMatrix() * mesh->getModelMatrix();
-                model = glm::translate(model, g_Engine.OBJECT_POS);
+                glm::mat4 scene_model = glm::translate(scene->getModelMatrix(), g_Engine.OBJECT_POS);
+                glm::mat4 model = scene_model * mesh->getModelMatrix();
 
                 shaderPhong->setMat4("model", model);
 
@@ -203,14 +203,17 @@ void renderScenesDepth() {
         for (const MeshGroup::Ptr& mesh_group : scene->getMeshGroups()) {
             for (const Mesh::Ptr& mesh : mesh_group->getMeshes()) {
 
-                glm::mat4 model = scene->getModelMatrix() * mesh->getModelMatrix();
-                model = glm::translate(model, g_Engine.OBJECT_POS);
+                glm::mat4 scene_model = glm::translate(scene->getModelMatrix(), g_Engine.OBJECT_POS);
+                glm::mat4 model = scene_model * mesh->getModelMatrix();
+
+                shaderShadow->setMat4("model", model);
 
                 mesh->draw();
             }
         }
     }
 }
+
 
 void offscrPass() {
     glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
@@ -252,7 +255,23 @@ void offscrPass() {
 
     shaderPhong->setVec3("viewPos", camera::g_Camera.Position);
 
+    shaderPhong->setBool("hasShadow", g_Engine.SHADOW_ENBL);
+
+    std::cout << std::endl;
+    for (unsigned int i = 0; i < 4; i++) {
+        for (unsigned int j = 0; j < 4; j++)
+            std::cout << lightSpaceMatrix[i][j] << ", ";
+        std::cout << std::endl;
+    }
+
+    shaderPhong->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+    shaderPhong->setInt("materialMaps.diffuse", TEXTURE_SLOT_DIFFUSE);
+    shaderPhong->setInt("materialMaps.specular", TEXTURE_SLOT_SPECULAR);
+    shaderPhong->setInt("materialMaps.shadow", TEXTURE_SLOT_SHADOW);
+
     sendLightUniforms(shaderPhong);
+
     renderScenes();
 
     // Draw skybox
@@ -306,12 +325,14 @@ void setupOffscrPass() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+
 void shadowPass() {
     glViewport(0, 0, g_Engine.SHADOW_WIDTH, g_Engine.SHADOW_HEIGHT);
+
+    // This single line took 3hrs of my life
     glEnable(GL_DEPTH_TEST);
 
     fboShadow->bind();
-
     glClear(GL_DEPTH_BUFFER_BIT);
 
     bool shadowMapping = g_Engine.SHADOW_ENBL;
@@ -319,18 +340,17 @@ void shadowPass() {
 
     if (!shadowMapping) return;
 
-    float near_plane = 0.1f, far_plane = 7.5f;
+    float near_plane = 1.0f, far_plane = 7.5f;
     glm::mat4 lightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
     glm::mat4 lightView = glm::lookAt(
         -g_SunLight->getDirection(),
-        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f),
         glm::vec3(0.0, 1.0, 0.0)
     );
 
-    glm::mat4 lightSpaceMatrix = lightProj * lightView;
+    lightSpaceMatrix = lightProj * lightView;
 
     shaderShadow->setMat4("lightSpaceMatrix", lightSpaceMatrix);
-    shaderPhong->setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
     renderScenesDepth();
 
@@ -338,13 +358,15 @@ void shadowPass() {
 }
 
 void setupShadowPass() {
+    shaderShadow->use();
 
     fboShadow = FrameBuffer::New();
+    fboShadow->bind();
+
     texShadowmap = DepthBufferTexture::New(g_Engine.SHADOW_WIDTH, g_Engine.SHADOW_HEIGHT);
     texShadowmap->setSlot(TEXTURE_SLOT_SHADOW);
 
     fboShadow->attachTexture(GL_DEPTH_ATTACHMENT, texShadowmap);
-
 
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
@@ -460,7 +482,9 @@ int init() {
 
     Scene::Ptr scene = Scene::New();
 
-    MeshGroup::Ptr model = Model::New("./assets/Sponza/glTF/Sponza.gltf");
+    Model::Ptr model1 = Model::New("./assets/Sponza/glTF/Sponza.gltf");
+    Model::Ptr model2 = Model::New("./assets/backpack.obj");
+
 
     MeshGroup::Ptr test_sm = MeshGroup::New();
     const Plane::Ptr plane = Plane::New();
@@ -494,6 +518,7 @@ int init() {
 
     //scene->addGroup(model);
     scene->addGroup(test_sm);
+    //scene->addGroup(model2);
 
     g_Scenes.push_back(scene);
 

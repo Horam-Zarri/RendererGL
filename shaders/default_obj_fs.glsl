@@ -100,8 +100,6 @@ void main() {
 
     FragColor = vec4(result, 1.0);
 
-    if (hasShadow)
-        FragColor = vec4(1.0, 0.0, 0.0, 1.0);
 }
 
 
