@@ -20,6 +20,21 @@ protected:
 
 public:
 
+    inline void translate(const glm::vec3& v) {
+        for (const Mesh::Ptr& mesh : m_Meshes)
+            mesh->translate(v);
+    }
+
+    inline void scale(const glm::vec3& v) {
+        for (const Mesh::Ptr& mesh : m_Meshes)
+            mesh->scale(v);
+    }
+
+    inline void rotate(float deg, const glm::vec3& v) {
+        for (const Mesh::Ptr& mesh : m_Meshes)
+            mesh->rotate(deg, v);
+    }
+
     MeshGroup(unsigned int primitive = GL_TRIANGLES, bool wireframe = false):
         m_Primitive{primitive}, m_Wireframe{wireframe} {}
 

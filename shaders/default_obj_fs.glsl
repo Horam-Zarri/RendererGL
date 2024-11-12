@@ -83,7 +83,7 @@ vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 
-float ShadowCalculation(vec4 fragPosLightSpace);
+float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir);
 
 void main() {
 
@@ -142,7 +142,7 @@ vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir) {
     vec3 lighting;
 
     if (hasShadow) {
-        float shadow = ShadowCalculation(fs_in.FragPosLightSpace);
+        float shadow = ShadowCalculation(fs_in.FragPosLightSpace, normal, lightDir);
         lighting = (ambient + (1.0 - shadow) * (diffuse + specular));
     } else {
         lighting = ambient + diffuse + specular;
@@ -220,17 +220,34 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 //    return (ambient + diffuse + specular);
 //}
 
-float ShadowCalculation(vec4 fragPosLightSpace) {
+float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir) {
 
     // not required for ortho, but do it anyways
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
 
     projCoords = projCoords * 0.5 + 0.5;
 
+    if (projCoords.z > 1.0)
+        return 0.0;
+
     float closestDepth = texture(materialMaps.shadow, projCoords.xy).r;
     float currentDepth = projCoords.z;
 
-    float shadow = currentDepth > closestDepth ? 1.0 : 0.0;
+    float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
+    float shadow = 0.0;
+
+    vec2 texelSize = 1.0 / textureSize(materialMaps.shadow, 0);
+    for(int x = -1; x <= 1; ++x)
+    {
+        for(int y = -1; y <= 1; ++y)
+        {
+            float pcfDepth = texture(materialMaps.shadow, projCoords.xy + vec2(x, y) *
+                                     texelSize).r;
+            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+        }
+    }
+
+    shadow /= 9.0;
 
     return shadow;
 }

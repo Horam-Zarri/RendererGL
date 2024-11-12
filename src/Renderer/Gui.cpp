@@ -79,12 +79,32 @@ void settings_panel() {
         ImGui::Checkbox("Enable Blinn", (bool*)&ENGINE_STATE.BLINN_ENBL);
 
         ImGui::SeparatorText("Shadows");
-        ImGui::Checkbox("Shadow mapping", (bool*)&ENGINE_STATE.SHADOW_ENBL);
+
+        static int shadow_state = 1;
+
+        const char* shadow_options[] = {
+            "None",
+            "Low",
+            "Medium",
+            "High",
+            "Ultra"
+        };
+
+        if (ImGui::Combo(
+            "Shadow mapping",
+            &shadow_state,
+            shadow_options,
+            IM_ARRAYSIZE(shadow_options)
+        )) {
+            ENGINE_STATE.SHADOW_ENBL = shadow_state != 0;
+            ENGINE_STATE.SHADOW_WIDTH = ENGINE_STATE.SHADOW_HEIGHT
+                = std::pow(2, shadow_state) * 1024;
+        }
 
 
-        ImGui::SeparatorText("Directional Light");
+        ImGui::SeparatorText("Directional Sun Light");
 
-        ImGui::Text("Position:");
+        ImGui::Text("Direction:");
 
         ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.2f);
 

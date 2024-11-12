@@ -133,6 +133,7 @@ void sendLightCubeUniforms(const Shader::Ptr& shader) {
     glEnable(GL_DEPTH_TEST);
 }
 
+
 void renderScenes() {
     shaderPhong->use();
     texShadowmap->bind();
@@ -257,12 +258,12 @@ void offscrPass() {
 
     shaderPhong->setBool("hasShadow", g_Engine.SHADOW_ENBL);
 
-    std::cout << std::endl;
-    for (unsigned int i = 0; i < 4; i++) {
-        for (unsigned int j = 0; j < 4; j++)
-            std::cout << lightSpaceMatrix[i][j] << ", ";
-        std::cout << std::endl;
-    }
+    //std::cout << std::endl;
+    //for (unsigned int i = 0; i < 4; i++) {
+    //    for (unsigned int j = 0; j < 4; j++)
+    //        std::cout << lightSpaceMatrix[i][j] << ", ";
+    //    std::cout << std::endl;
+    //}
 
     shaderPhong->setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
@@ -329,8 +330,7 @@ void setupOffscrPass() {
 void shadowPass() {
     glViewport(0, 0, g_Engine.SHADOW_WIDTH, g_Engine.SHADOW_HEIGHT);
 
-    // This single line took 3hrs of my life
-    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_DEPTH_TEST); // This single line took 3hrs of my life
 
     fboShadow->bind();
     glClear(GL_DEPTH_BUFFER_BIT);
@@ -340,8 +340,8 @@ void shadowPass() {
 
     if (!shadowMapping) return;
 
-    float near_plane = 1.0f, far_plane = 7.5f;
-    glm::mat4 lightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+    float near_plane = 1.0f, far_plane = 27.5f;
+    glm::mat4 lightProj = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, near_plane, far_plane);
     glm::mat4 lightView = glm::lookAt(
         -g_SunLight->getDirection(),
         glm::vec3(0.0f),
@@ -350,9 +350,14 @@ void shadowPass() {
 
     lightSpaceMatrix = lightProj * lightView;
 
+
     shaderShadow->setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
+    // TODO: A mechanism to improve peter panning without removing 2d things
+
+    //glCullFace(GL_FRONT);
     renderScenesDepth();
+    //glCullFace(GL_BACK);
 
     fboShadow->unbind();
 }
@@ -459,13 +464,13 @@ void render() {
 
 
 }
-
 int init() {
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_STENCIL_TEST);
+    //glEnable(GL_CULL_FACE);
 
     shaderDefault = Shader::New("./shaders/light_cube_vs.glsl", "./shaders/light_cube_fs.glsl");
     shaderPhong = Shader::New("./shaders/default_obj_vs.glsl", "./shaders/default_obj_fs.glsl");
@@ -483,11 +488,15 @@ int init() {
     Scene::Ptr scene = Scene::New();
 
     Model::Ptr model1 = Model::New("./assets/Sponza/glTF/Sponza.gltf");
+    model1->scale(glm::vec3(0.01));
     Model::Ptr model2 = Model::New("./assets/backpack.obj");
 
 
     MeshGroup::Ptr test_sm = MeshGroup::New();
-    const Plane::Ptr plane = Plane::New();
+    const Plane::Ptr plane = Plane::New(), plane2 = Plane::New();
+    plane2->translate(glm::vec3(0.0, 4.0, 0.0));
+    plane2->scale(glm::vec3(0.1));
+
     const Texture::Ptr wood_tex = Texture::New("./tex/wood.png");
 
     const Cube::Ptr cb1 = Cube::New();
@@ -506,6 +515,7 @@ int init() {
 
 
     test_sm->addMesh(plane);
+    test_sm->addMesh(plane2);
     test_sm->addMesh(cb1);
     test_sm->addMesh(cb2);
     test_sm->addMesh(cb3);
@@ -516,8 +526,8 @@ int init() {
     cb2->addTexture(wood_tex);
     cb3->addTexture(wood_tex);
 
-    //scene->addGroup(model);
-    scene->addGroup(test_sm);
+    scene->addGroup(model1);
+    //scene->addGroup(test_sm);
     //scene->addGroup(model2);
 
     g_Scenes.push_back(scene);
@@ -601,6 +611,14 @@ void updateState() {
 
     if (g_Engine.SHADOW_ENBL != ENGINE_STATE.SHADOW_ENBL)
         g_Engine.SHADOW_ENBL = ENGINE_STATE.SHADOW_ENBL;
+
+    if (g_Engine.SHADOW_WIDTH != ENGINE_STATE.SHADOW_WIDTH) {
+
+        g_Engine.SHADOW_WIDTH = ENGINE_STATE.SHADOW_WIDTH;
+        g_Engine.SHADOW_HEIGHT = ENGINE_STATE.SHADOW_HEIGHT;
+
+        texShadowmap->resize(g_Engine.SHADOW_WIDTH, g_Engine.SHADOW_HEIGHT);
+    }
 
     // must update msaa before resizing
     if (g_Engine.MSAA_ENBL != ENGINE_STATE.MSAA_ENBL)

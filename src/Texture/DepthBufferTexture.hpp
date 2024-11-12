@@ -12,6 +12,8 @@ public:
 
     DepthBufferTexture(unsigned int width, unsigned int height);
 
+    void resize(unsigned int width, unsigned int height);
+
     virtual void genTexture() override;
 };
 
