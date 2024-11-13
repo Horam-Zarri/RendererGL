@@ -87,4 +87,29 @@ static inline std::vector<Vertex>& generateNormals(std::vector<Vertex>& vertices
     return vertices;
 }
 
+static inline std::vector<Vertex>& generateTangentBitangents(std::vector<Vertex>& vertices)
+{
+    for (unsigned int i = 0; i < vertices.size(); i += 3) {
+        const auto [tan, bitan] = calculateTangentBitangent(
+            vertices[i].Position,
+            vertices[i + 1].Position,
+            vertices[i + 2].Position,
+            vertices[i].TexCoords,
+            vertices[i + 1].TexCoords,
+            vertices[i + 2].TexCoords
+        );
+
+        vertices[i].Tangent =
+        vertices[i + 1].Tangent =
+        vertices[i + 2].Tangent =
+        tan;
+
+        vertices[i].Bitangent =
+        vertices[i + 1].Bitangent =
+        vertices[i + 2].Bitangent =
+        bitan;
+    }
+    return vertices;
+}
+
 #endif

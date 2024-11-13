@@ -106,11 +106,11 @@ void sendLightUniforms(const Shader::Ptr& shader) {
     shader->setVec3("directionalLight.specular", g_SunLight->getSpecular());
 }
 
-void sendLightCubeUniforms(const Shader::Ptr& shader) {
+void renderLightCubes(const Shader::Ptr& shader) {
     // light cubes should be always visible
     glDisable(GL_DEPTH_TEST);
 
-    shaderDefault->use();
+    shader->use();
     for (unsigned int i = 0; i < g_Lights.size(); ++i) {
 
         const auto& light = g_Lights[i];
@@ -122,12 +122,12 @@ void sendLightCubeUniforms(const Shader::Ptr& shader) {
             PointLight* pl = dynamic_cast<PointLight*>(light.get());
 
             md = glm::translate(md, pl->getPosition());
-            md = glm::scale(md, glm::vec3(0.5f));
+            md = glm::scale(md, glm::vec3(.5f));
 
 
-            shaderDefault->setMat4("model", md);
-            shaderDefault->setMat4("view", g_View);
-            shaderDefault->setMat4("projection", g_View);
+            shader->setMat4("model", md);
+            shader->setMat4("view", g_View);
+            shader->setMat4("projection", g_Proj);
 
             pointLightsCube->draw();
         }
@@ -272,8 +272,7 @@ void offscrPass() {
     skybox->draw();
 
     // Draw lights cube debug
-    sendLightCubeUniforms(shaderDefault);
-
+    renderLightCubes(shaderDefault);
 
     if (g_Engine.MSAA_ENBL)
         fboOffscrMSAA->blitTo(fboOffscr, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
@@ -481,7 +480,9 @@ int init() {
 
     MeshGroup::Ptr test_shadow = MeshGroup::New();
     const Plane::Ptr plane = Plane::New();
-    plane->scale(glm::vec3(20.f, 1.f, 20.f));
+    plane->rotate(90.f, glm::vec3(1.0f, 0.0, 0.0f));
+    plane->translate(glm::vec3(0.0f, 0.0f, .5f));
+    plane->scale(glm::vec3(20.f, 20.f, 1.f));
     const Cube::Ptr cb1 = Cube::New();
     const Cube::Ptr cb2 = Cube::New();
     const Cube::Ptr cb3 = Cube::New();
@@ -511,20 +512,24 @@ int init() {
     cb3->addTexture(wood_tex);
 
     MeshGroup::Ptr test_normal = MeshGroup::New();
-    const Plane::Ptr plane3 = Plane::New();
+    const Plane::Ptr planeN1 = Plane::New(), planeN2 = Plane::New();
 
+    planeN2->translate(glm::vec3(2.0, 0.0, 0.0));
     const Texture::Ptr brick_tex = Texture::New("./tex/brickwall.jpg");
     const Texture::Ptr brick_tex_norm = Texture::New("./tex/brickwall_normal.jpg");
 
     brick_tex_norm->setType(TextureType::Normal);
 
-    plane3->addTexture(brick_tex);
-    plane3->addTexture(brick_tex_norm);
-    test_normal->addMesh(plane3);
+    planeN1->addTexture(brick_tex);
+    planeN1->addTexture(brick_tex_norm);
+    planeN2->addTexture(brick_tex);
 
-    //scene->addGroup(test_normal);
+    test_normal->addMesh(planeN1);
+    test_normal->addMesh(planeN2);
+
+    scene->addGroup(test_normal);
     //scene->addGroup(model1);
-    scene->addGroup(test_shadow);
+    //scene->addGroup(test_shadow);
     //scene->addGroup(model2);
 
     g_Scenes.push_back(scene);

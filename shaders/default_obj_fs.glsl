@@ -121,7 +121,6 @@ vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir) {
     float diff = max(dot(normal, lightDir), 0.0);
 
     // specular shading
-    vec3 reflectDir = reflect(-lightDir, normal);
     float spec = 0.0;
 
     if (blinn) {
@@ -148,7 +147,6 @@ vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir) {
         diffuse = light.diffuse * diff * material.diffuse;
         specular = light.specular * spec * material.specular;
     }
-
 
     vec3 lighting;
 

@@ -10,13 +10,13 @@
 
 static std::vector<Vertex> planeVertices = {
     // positions            // normals         // texcoords
-    Vertex {.Position = glm::vec3(1.0f, -0.5f,  1.0f), .Normal =  glm::vec3(0.0f, 1.0f, 0.0f), .TexCoords =  glm::vec2(1.0f,  0.0f) },
-    Vertex {.Position = glm::vec3(-1.0f, -0.5f,  1.0f), .Normal =  glm::vec3(0.0f, 1.0f, 0.0f), .TexCoords = glm::vec2(   0.0f,  0.0f)},
-    Vertex {.Position = glm::vec3(-1.0f, -0.5f, -1.0f), .Normal =  glm::vec3(0.0f, 1.0f, 0.0f), .TexCoords = glm::vec2(   0.0f, 1.0f)},
+    Vertex {.Position = glm::vec3(-1.0f,  1.0f,  0.0f), .Normal =  glm::vec3(0.0f, 0.0f, 1.0f), .TexCoords = glm::vec2(0.0f, 1.0f) },
+    Vertex {.Position = glm::vec3(-1.0f, -1.0f,  0.0f), .Normal =  glm::vec3(0.0f, 0.0f, 1.0f), .TexCoords = glm::vec2(0.0f, 0.0f)},
+    Vertex {.Position = glm::vec3( 1.0f, -1.0f,  0.0f), .Normal =  glm::vec3(0.0f, 0.0f, 1.0f), .TexCoords = glm::vec2(1.0f, 0.0f)},
 
-    Vertex {.Position = glm::vec3(1.0f, -0.5f,  1.0f), .Normal =  glm::vec3(0.0f, 1.0f, 0.0f), .TexCoords = glm::vec2(  1.0f,  0.0f)},
-    Vertex {.Position = glm::vec3(-1.0f, -0.5f, -1.0f), .Normal =  glm::vec3(0.0f, 1.0f, 0.0f), .TexCoords = glm::vec2(   0.0f, 1.0f)},
-    Vertex {.Position = glm::vec3(1.0f, -0.5f, -1.0f), .Normal =  glm::vec3(0.0f, 1.0f, 0.0f), .TexCoords = glm::vec2(  1.0f, 1.0f)},
+    Vertex {.Position = glm::vec3(-1.0f,  1.0f,  0.0f), .Normal =  glm::vec3(0.0f, 0.0f, 1.0f), .TexCoords = glm::vec2(0.0f, 1.0f)},
+    Vertex {.Position = glm::vec3( 1.0f, -1.0f,  0.0f), .Normal =  glm::vec3(0.0f, 0.0f, 1.0f), .TexCoords = glm::vec2(1.0f, 0.0f)},
+    Vertex {.Position = glm::vec3( 1.0f,  1.0f,  0.0f), .Normal =  glm::vec3(0.0f, 0.0f, 1.0f), .TexCoords = glm::vec2(1.0f, 1.0f)},
 };
 
 class Plane : public Mesh {
@@ -24,7 +24,7 @@ class Plane : public Mesh {
     GENERATE_PTR(Plane)
 
 public:
-    Plane() : Mesh(planeVertices) {}
+    Plane() : Mesh(generateTangentBitangents(planeVertices)) {}
 };
 
 #endif
