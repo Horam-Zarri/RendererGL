@@ -128,6 +128,9 @@ extern std::vector<Scene::Ptr> g_Scenes;
 extern DirectionalLight::Ptr g_SunLight;
 extern std::vector<Light::Ptr> g_Lights;
 
+extern glm::mat4 g_View;
+extern glm::mat4 g_Proj;
+
 extern FrameBuffer::Ptr fboShadow;
 extern FrameBuffer::Ptr fboOffscrMSAA;
 extern FrameBuffer::Ptr fboOffscr;

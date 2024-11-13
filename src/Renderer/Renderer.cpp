@@ -27,6 +27,7 @@
 
 #include "Skybox.hpp"
 #include "Window.hpp"
+#include "glm/ext/matrix_clip_space.hpp"
 
 #include <memory>
 #include <ostream>
@@ -51,6 +52,9 @@ Shader::Ptr shaderShadow;
 std::vector<Scene::Ptr> g_Scenes;
 DirectionalLight::Ptr g_SunLight;
 std::vector<Light::Ptr> g_Lights;
+
+glm::mat4 g_View;
+glm::mat4 g_Proj;
 
 FrameBuffer::Ptr fboShadow;
 FrameBuffer::Ptr fboOffscrMSAA;
@@ -122,8 +126,8 @@ void sendLightCubeUniforms(const Shader::Ptr& shader) {
 
 
             shaderDefault->setMat4("model", md);
-            shaderDefault->setMat4("view", camera::g_Camera.GetViewMatrix());
-            shaderDefault->setMat4("projection", glm::perspective(camera::g_Camera.Fov(), ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE));
+            shaderDefault->setMat4("view", g_View);
+            shaderDefault->setMat4("projection", g_View);
 
             pointLightsCube->draw();
         }
@@ -216,6 +220,20 @@ void renderScenesDepth() {
 }
 
 
+void sendOffscrUniforms(const Shader::Ptr& shader) {
+    shader->setMat4("view", g_View);
+    shader->setMat4("projection", g_Proj);
+    shader->setVec3("viewPos", camera::g_Camera.Position);
+    shader->setBool("hasShadow", g_Engine.SHADOW_ENBL);
+
+    shader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+    shader->setInt("materialMaps.diffuse", TEXTURE_SLOT_DIFFUSE);
+    shader->setInt("materialMaps.specular", TEXTURE_SLOT_SPECULAR);
+    shader->setInt("materialMaps.shadow", TEXTURE_SLOT_SHADOW);
+
+}
+
 void offscrPass() {
     glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
@@ -235,57 +253,22 @@ void offscrPass() {
     glClearColor(g_Engine.CLEAR_COLOR.r,g_Engine.CLEAR_COLOR.g, g_Engine.CLEAR_COLOR.b, g_Engine.CLEAR_COLOR.a); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glm::mat4 view = camera::g_Camera.GetViewMatrix();
-    glm::mat4 proj = glm::perspective(camera::g_Camera.Fov(), ASPECT_RATIO,
-                                      g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE);
-
-
-    // Draw main scene
-
-    glm::mat4 md(1.0f);
-    md = glm::translate(md, g_Engine.OBJECT_POS);
-    //md = glm::scale(md, glm::vec3(0.01f));
-
-    shaderPhong->setMat4("model", md);
-
-    // TODO: need to explain?
-    shaderShadow->setMat4("model", md);
-
-    shaderPhong->setMat4("view", view);
-    shaderPhong->setMat4("projection", proj);
-
-    shaderPhong->setVec3("viewPos", camera::g_Camera.Position);
-
-    shaderPhong->setBool("hasShadow", g_Engine.SHADOW_ENBL);
-
-    //std::cout << std::endl;
-    //for (unsigned int i = 0; i < 4; i++) {
-    //    for (unsigned int j = 0; j < 4; j++)
-    //        std::cout << lightSpaceMatrix[i][j] << ", ";
-    //    std::cout << std::endl;
-    //}
-
-    shaderPhong->setMat4("lightSpaceMatrix", lightSpaceMatrix);
-
-    shaderPhong->setInt("materialMaps.diffuse", TEXTURE_SLOT_DIFFUSE);
-    shaderPhong->setInt("materialMaps.specular", TEXTURE_SLOT_SPECULAR);
-    shaderPhong->setInt("materialMaps.shadow", TEXTURE_SLOT_SHADOW);
-
+    // Draw Scene
+    sendOffscrUniforms(shaderPhong);
     sendLightUniforms(shaderPhong);
 
     renderScenes();
 
     // Draw skybox
-
     shaderSkybox->use();
-    shaderSkybox->setMat4("view", glm::mat4(glm::mat3(view)));
-    shaderSkybox->setMat4("projection", proj);
+    shaderSkybox->setMat4("view", glm::mat4(glm::mat3(g_View)));
+    shaderSkybox->setMat4("projection", g_Proj);
 
     skybox->draw();
 
-    // Draw lights
-
+    // Draw lights cube debug
     sendLightCubeUniforms(shaderDefault);
+
 
     if (g_Engine.MSAA_ENBL)
         fboOffscrMSAA->blitTo(fboOffscr, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
@@ -384,21 +367,17 @@ void setupShadowPass() {
 }
 
 void sendPostprocessUniforms() {
+    shaderPostProcess->setInt("screenTexture", TEXTURE_SLOT_SCREEN);
 
-    shaderPostProcess->setInt("screenTexture", 0);
     shaderPostProcess->setBool("gamma", true);
-
-    //pp_shader->setInt("screenTexture", 0);
 
     shaderPostProcess->setBool("sharpen", g_Engine.SHARPNESS_ENBL);
     shaderPostProcess->setFloat("sharpness", g_Engine.SHARPNESS_AMOUNT);
-
     shaderPostProcess->setBool("blur", g_Engine.BLUR_ENBL);
     shaderPostProcess->setBool("grayscale", g_Engine.GRAYSCALE_ENBL);
 
     texOffscr->setSlot(TEXTURE_SLOT_SCREEN);
     texOffscr->bind();
-    //offscr_tex.bind(0);
 }
 
 void postprocessPass() {
@@ -437,6 +416,9 @@ void render() {
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    g_View = camera::g_Camera.GetViewMatrix();
+    g_Proj = glm::perspective(camera::g_Camera.Fov(),
+        ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE);
 
     shaderShadow->use();
     shadowPass();
@@ -612,7 +594,7 @@ void updateState() {
     if (g_Engine.SHADOW_ENBL != ENGINE_STATE.SHADOW_ENBL)
         g_Engine.SHADOW_ENBL = ENGINE_STATE.SHADOW_ENBL;
 
-    if (g_Engine.SHADOW_WIDTH != ENGINE_STATE.SHADOW_WIDTH) {
+    if (g_Engine.SHADOW_ENBL && (g_Engine.SHADOW_WIDTH != ENGINE_STATE.SHADOW_WIDTH)) {
 
         g_Engine.SHADOW_WIDTH = ENGINE_STATE.SHADOW_WIDTH;
         g_Engine.SHADOW_HEIGHT = ENGINE_STATE.SHADOW_HEIGHT;

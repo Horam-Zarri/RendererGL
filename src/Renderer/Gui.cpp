@@ -97,8 +97,10 @@ void settings_panel() {
             IM_ARRAYSIZE(shadow_options)
         )) {
             ENGINE_STATE.SHADOW_ENBL = shadow_state != 0;
-            ENGINE_STATE.SHADOW_WIDTH = ENGINE_STATE.SHADOW_HEIGHT
-                = std::pow(2, shadow_state) * 1024;
+            if (ENGINE_STATE.SHADOW_ENBL) {
+                ENGINE_STATE.SHADOW_WIDTH = ENGINE_STATE.SHADOW_HEIGHT
+                    = std::pow(2, shadow_state) * 1024;
+            }
         }
 
 
