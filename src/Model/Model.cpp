@@ -12,7 +12,12 @@ Model::Model(const std::string& path) {
 
 void Model::loadModel(std::string path) {
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
+    const aiScene* scene = importer.ReadFile(path,
+        aiProcess_Triangulate |
+        aiProcess_FlipUVs |
+        aiProcess_GenNormals |
+        aiProcess_CalcTangentSpace
+    );
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
         !scene->mRootNode)
@@ -79,6 +84,18 @@ Mesh::Ptr Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         else
             vertex.TexCoords = glm::vec2(0.0f, 0.0f);
 
+        vector.x = mesh->mTangents[i].x;
+        vector.y = mesh->mTangents[i].y;
+        vector.z = mesh->mTangents[i].z;
+
+        vertex.Tangent = vector;
+
+        vector.x = mesh->mBitangents[i].x;
+        vector.y = mesh->mBitangents[i].y;
+        vector.z = mesh->mBitangents[i].z;
+
+        vertex.Bitangent = vector;
+
         vertices.push_back(vertex);
     }
 
@@ -93,13 +110,18 @@ Mesh::Ptr Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     if(mesh->mMaterialIndex >= 0)
     {
         aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
-        std::vector<Texture::Ptr> diffuseMaps = loadMaterialTextures(material,
-                                                                aiTextureType_DIFFUSE);
+
+        std::vector<Texture::Ptr> diffuseMaps = loadMaterialTextures(
+            material, aiTextureType_DIFFUSE);
         textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-        std::vector<Texture::Ptr> specularMaps = loadMaterialTextures(material,
-                                                                 aiTextureType_SPECULAR);
-        textures.insert(textures.end(), specularMaps.begin(),
-                        specularMaps.end());
+
+        std::vector<Texture::Ptr> specularMaps = loadMaterialTextures(
+            material, aiTextureType_SPECULAR);
+        textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+
+        std::vector<Texture::Ptr> normalMaps = loadMaterialTextures(
+            material, aiTextureType_HEIGHT);
+        textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
     }
 
     std::cout << "AFTER MATERIAL" << std::endl;
@@ -147,8 +169,12 @@ std::vector<Texture::Ptr> Model::loadMaterialTextures(aiMaterial* mat, aiTexture
 
             if (type == aiTextureType_DIFFUSE)
                 tex_type = TextureType::Diffuse;
-            else
+            else if (type == aiTextureType_SPECULAR)
                 tex_type = TextureType::Specular;
+            else if (type == aiTextureType_HEIGHT)
+                tex_type = TextureType::Normal;
+            else
+                tex_type = TextureType::None;
 
             Texture::Ptr tx = Texture::New(fpath, tex_type);
 

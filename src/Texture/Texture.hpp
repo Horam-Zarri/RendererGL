@@ -43,6 +43,7 @@ struct TextureConfig {
 enum class TextureType {
     None,
     Diffuse, Specular,
+    Normal,
     CubeMap,
     ColorAttach, ColorAttachMultisample,
     DepthAttach,

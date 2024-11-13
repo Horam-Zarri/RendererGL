@@ -100,6 +100,7 @@ struct EngineState {
 constexpr static unsigned int TEXTURE_SLOT_DIFFUSE = 0;
 constexpr static unsigned int TEXTURE_SLOT_SPECULAR = 1;
 constexpr static unsigned int TEXTURE_SLOT_SHADOW = 2;
+constexpr static unsigned int TEXTURE_SLOT_NORMAL = 3;
 
 // Texture slots for shaderPostProcess
 constexpr static unsigned int TEXTURE_SLOT_SCREEN = 0;

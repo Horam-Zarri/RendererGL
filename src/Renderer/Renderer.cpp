@@ -151,7 +151,7 @@ void renderScenes() {
 
                 shaderPhong->setMat4("model", model);
 
-                bool hasDiffuse = false, hasSpecular = false;
+                bool hasDiffuse = false, hasSpecular = false, hasNormal = false;
 
                 for (const auto& texture : mesh->getTextures()) {
 
@@ -166,6 +166,10 @@ void renderScenes() {
                             slot = TEXTURE_SLOT_SPECULAR;
                             hasSpecular = true;
                             break;
+                        case TextureType::Normal:
+                            slot = TEXTURE_SLOT_NORMAL;
+                            hasNormal = true;
+                            break;
                         default:
                             break;
                     }
@@ -177,6 +181,7 @@ void renderScenes() {
 
                 shaderPhong->setBool("hasDiffuse", hasDiffuse);
                 shaderPhong->setBool("hasSpecular", hasSpecular);
+                shaderPhong->setBool("hasNormal", hasNormal);
 
                 const auto& material = mesh->getMaterial();
 
@@ -231,7 +236,7 @@ void sendOffscrUniforms(const Shader::Ptr& shader) {
     shader->setInt("materialMaps.diffuse", TEXTURE_SLOT_DIFFUSE);
     shader->setInt("materialMaps.specular", TEXTURE_SLOT_SPECULAR);
     shader->setInt("materialMaps.shadow", TEXTURE_SLOT_SHADOW);
-
+    shader->setInt("materialMaps.normal", TEXTURE_SLOT_NORMAL);
 }
 
 void offscrPass() {
@@ -474,13 +479,9 @@ int init() {
     Model::Ptr model2 = Model::New("./assets/backpack.obj");
 
 
-    MeshGroup::Ptr test_sm = MeshGroup::New();
-    const Plane::Ptr plane = Plane::New(), plane2 = Plane::New();
-    plane2->translate(glm::vec3(0.0, 4.0, 0.0));
-    plane2->scale(glm::vec3(0.1));
-
-    const Texture::Ptr wood_tex = Texture::New("./tex/wood.png");
-
+    MeshGroup::Ptr test_shadow = MeshGroup::New();
+    const Plane::Ptr plane = Plane::New();
+    plane->scale(glm::vec3(20.f, 1.f, 20.f));
     const Cube::Ptr cb1 = Cube::New();
     const Cube::Ptr cb2 = Cube::New();
     const Cube::Ptr cb3 = Cube::New();
@@ -496,11 +497,12 @@ int init() {
     cb3->scale(glm::vec3(0.25));
 
 
-    test_sm->addMesh(plane);
-    test_sm->addMesh(plane2);
-    test_sm->addMesh(cb1);
-    test_sm->addMesh(cb2);
-    test_sm->addMesh(cb3);
+    test_shadow->addMesh(plane);
+    test_shadow->addMesh(cb1);
+    test_shadow->addMesh(cb2);
+    test_shadow->addMesh(cb3);
+
+    const Texture::Ptr wood_tex = Texture::New("./tex/wood.png");
 
     plane->addTexture(wood_tex);
 
@@ -508,8 +510,21 @@ int init() {
     cb2->addTexture(wood_tex);
     cb3->addTexture(wood_tex);
 
-    scene->addGroup(model1);
-    //scene->addGroup(test_sm);
+    MeshGroup::Ptr test_normal = MeshGroup::New();
+    const Plane::Ptr plane3 = Plane::New();
+
+    const Texture::Ptr brick_tex = Texture::New("./tex/brickwall.jpg");
+    const Texture::Ptr brick_tex_norm = Texture::New("./tex/brickwall_normal.jpg");
+
+    brick_tex_norm->setType(TextureType::Normal);
+
+    plane3->addTexture(brick_tex);
+    plane3->addTexture(brick_tex_norm);
+    test_normal->addMesh(plane3);
+
+    //scene->addGroup(test_normal);
+    //scene->addGroup(model1);
+    scene->addGroup(test_shadow);
     //scene->addGroup(model2);
 
     g_Scenes.push_back(scene);
