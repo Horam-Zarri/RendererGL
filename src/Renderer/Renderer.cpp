@@ -69,33 +69,63 @@ MultisampleTexture::Ptr texOffscrMSAA;
 
 Quad::Ptr screenQuad;
 Cube::Ptr pointLightsCube;
+Cube::Ptr spotLightsCube;
 
 Skybox::Ptr skybox;
 
 
 static glm::mat4 lightSpaceMatrix;
 
+
 void sendLightUniforms(const Shader::Ptr& shader) {
     shader->use();
 
     shader->setBool("blinn", g_Engine.BLINN_ENBL);
-    shader->setInt("pointLightsSize", g_Lights.size());
+    shader->setInt("pointLightsSize", getLightsCount(LightType::PointLight));
+    shader->setInt("spotLightsSize", getLightsCount(LightType::SpotLight));
 
     for (unsigned int i = 0; i < g_Lights.size(); ++i) {
-        PointLight::Ptr pl = std::dynamic_pointer_cast<PointLight, Light>(g_Lights[i]);
 
-        std::string base = "pointLights[" + std::to_string(i) + "]";
-        shader->setVec3(base + ".position", pl->getPosition());
+        LightType light_type = g_Lights[i]->getType();
 
-        shader->setVec3(base + ".ambient", pl->getAmbient());
-        shader->setVec3(base + ".diffuse", pl->getDiffuse());
-        shader->setVec3(base + ".specular", pl->getPosition());
+        if (light_type == LightType::PointLight) {
+            PointLight::Ptr pl = std::dynamic_pointer_cast<PointLight, Light>(g_Lights[i]);
 
-        Attenuation atten = pl->getAttenuation();
+            std::string base = "pointLights[" + std::to_string(i) + "]";
+            shader->setVec3(base + ".position", pl->getPosition());
 
-        shader->setFloat(base + ".constant", atten.constant);
-        shader->setFloat(base + ".linear", atten.linear);
-        shader->setFloat(base + ".quadratic", atten.quadratic);
+            shader->setVec3(base + ".ambient", pl->getAmbient());
+            shader->setVec3(base + ".diffuse", pl->getDiffuse());
+            shader->setVec3(base + ".specular", pl->getPosition());
+
+            Attenuation atten = pl->getAttenuation();
+
+            shader->setFloat(base + ".constant", atten.constant);
+            shader->setFloat(base + ".linear", atten.linear);
+            shader->setFloat(base + ".quadratic", atten.quadratic);
+        }
+
+        if (light_type == LightType::SpotLight) {
+
+            SpotLight::Ptr sl = std::dynamic_pointer_cast<SpotLight, Light>(g_Lights[i]);
+
+            std::string base = "spotLights[" + std::to_string(i) + "]";
+            shader->setVec3(base + ".position", sl->getPosition());
+            shader->setVec3(base + ".direction", sl->getDirection());
+
+            shader->setVec3(base + ".ambient", sl->getAmbient());
+            shader->setVec3(base + ".diffuse", sl->getDiffuse());
+            shader->setVec3(base + ".specular", sl->getSpecular());
+
+            Attenuation atten = sl->getAttenuation();
+
+            shader->setFloat(base + ".constant", atten.constant);
+            shader->setFloat(base + ".linear", atten.linear);
+            shader->setFloat(base + ".quadratic", atten.quadratic);
+
+            shader->setFloat(base + ".cutOff", sl->getCutOff());
+            shader->setFloat(base + ".outerCutOff", sl->getOuterCutOff());
+        }
     }
 
     shader->setInt("material.shininess", 32);
@@ -117,7 +147,8 @@ void renderLightCubes(const Shader::Ptr& shader) {
 
         glm::mat4 md(1.0f);
 
-        if (light->getType() == LightType::PointLight) {
+        const LightType light_type = light->getType();
+        if (light_type == LightType::PointLight) {
 
             PointLight* pl = dynamic_cast<PointLight*>(light.get());
 
@@ -130,6 +161,20 @@ void renderLightCubes(const Shader::Ptr& shader) {
             shader->setMat4("projection", g_Proj);
 
             pointLightsCube->draw();
+
+        } else if (light_type == LightType::SpotLight) {
+
+
+            SpotLight* sl = dynamic_cast<SpotLight*>(light.get());
+
+            md = glm::translate(md, sl->getPosition());
+            md = glm::scale(md, glm::vec3(.5f));
+
+            shader->setMat4("model", md);
+            shader->setMat4("view", g_View);
+            shader->setMat4("projection", g_Proj);
+
+            spotLightsCube->draw();
         }
     }
 
@@ -422,7 +467,7 @@ void render() {
 
     g_View = camera::g_Camera.GetViewMatrix();
     g_Proj = glm::perspective(camera::g_Camera.Fov(),
-        ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE);
+                              ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE);
 
     shaderShadow->use();
     shadowPass();
@@ -527,8 +572,8 @@ int init() {
     test_normal->addMesh(planeN1);
     test_normal->addMesh(planeN2);
 
-    scene->addGroup(test_normal);
-    //scene->addGroup(model1);
+    //scene->addGroup(test_normal);
+    scene->addGroup(model1);
     //scene->addGroup(test_shadow);
     //scene->addGroup(model2);
 
@@ -543,7 +588,9 @@ int init() {
     );
 
     pointLightsCube = Cube::New();
+    spotLightsCube = Cube::New();
 
+    addSpotLight();
     // TODO: this is very ugly
 
     const std::string base = "./tex/skybox/";
@@ -664,25 +711,44 @@ void updateState() {
 }
 
 
+void addSpotLight() {
+    constexpr glm::vec3 initial_pos(-8.0, 2.0, 3.0);
+    constexpr glm::vec3 initial_dir(0.0, 1.0, 0.0);
+    constexpr glm::vec3 initial_color(1.0);
+    constexpr unsigned int initial_distance = 30;
+
+    if (g_Lights.size() < renderer::NR_MAX_LIGHTS)
+        g_Lights.push_back(SpotLight::New(initial_pos, initial_dir, initial_distance, initial_color, 10.f, 15.f));
+}
+
 void addPointLight() {
     constexpr glm::vec3 initial_pos(2.0, 2.0, 5.0);
     constexpr glm::vec3 initial_color(1.0);
     constexpr unsigned int initial_distance = 13;
 
-    if (g_Lights.size() < renderer::NR_MAX_POINT_LIGHTS)
+    if (g_Lights.size() < renderer::NR_MAX_LIGHTS)
         g_Lights.push_back(PointLight::New(initial_pos, initial_distance, initial_color));
 }
 
-void removePointLight(int index) {
+size_t getLightsCount(LightType lt) {
+    size_t count = 0;
+    for (const auto& light : g_Lights)
+        if (light->getType() == lt)
+            count++;
+    return count;
+}
+
+void removeLight(int index) {
     g_Lights.erase(g_Lights.begin() + index);
 }
 
-const PointLight::Ptr getPointLight(int index) {
+const Light::Ptr getLight(int index) {
     return
-    index < g_Lights.size() ?
-    std::dynamic_pointer_cast<PointLight, Light>(g_Lights[index]) :
-    nullptr;
+        index < g_Lights.size() ?
+        g_Lights[index] :
+        nullptr;
 }
+
 
 void terminate() {}
 }

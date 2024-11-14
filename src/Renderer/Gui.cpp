@@ -1,8 +1,10 @@
 #include "Gui.hpp"
+#include "Lighting/Light.hpp"
 #include "imgui.h"
 #include "Renderer.hpp"
 #include <cmath>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -21,7 +23,6 @@ void settings_panel() {
         | ImGuiWindowFlags_MenuBar
         | ImGuiWindowFlags_NoMove
         | ImGuiWindowFlags_NoResize;
-
 
     if (!ImGui::Begin("Work Space", NULL, flags))
     {
@@ -120,29 +121,41 @@ void settings_panel() {
         ImGui::DragFloat3("Diffuse", &ENGINE_STATE.LIGHT_DIFFUSE.x, .05f, 0.0f, 1.0f);
         ImGui::DragFloat3("Specular", &ENGINE_STATE.LIGHT_SPECULAR.x, .05f, 0.0f, 1.0f);
 
-        ImGui::SeparatorText("Point Lights");
+        ImGui::SeparatorText("Scene Lights");
 
         if (ImGui::Button("Add point light")) {
             renderer::addPointLight();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Add spot light")) {
+            renderer::addSpotLight();
         }
 
         ImGui::Spacing();
 
         // TODO: eh?
-        for (unsigned int i = 0; i < renderer::NR_MAX_POINT_LIGHTS; i++) {
-            auto pl = renderer::getPointLight(i);
+        for (unsigned int i = 0; i < renderer::NR_MAX_LIGHTS; i++) {
+            auto scene_light = renderer::getLight(i);
 
-            if (pl == nullptr) {
+            if (scene_light == nullptr)
                 break;
-            }
 
             ImGui::PushID(i);
 
-            ImGui::Text("Point Light - %d", i);
+            auto light_type = scene_light->getType();
+
+            ImGui::Text("Scene Light - %d", i);
+
             ImGui::SameLine();
             if (ImGui::Button("Remove")) {
-                renderer::removePointLight(i);
+                renderer::removeLight(i);
             }
+
+            auto pl = std::dynamic_pointer_cast<PointLight, Light>(scene_light);
+
+            if (pl == nullptr) continue;
+
+            auto sl = std::dynamic_pointer_cast<SpotLight, PointLight>(pl);
 
             auto pl_pos = pl->getPosition();
             auto pl_ambient = pl->getAmbient();
@@ -151,6 +164,11 @@ void settings_panel() {
             auto pl_atten = pl->getAttenuation();
 
             if (ImGui::DragFloat3("Position", &pl_pos.x)) { pl->setPosition(pl_pos); }
+
+            if (sl != nullptr)  {
+                auto sl_dir = sl->getDirection();
+                if (ImGui::DragFloat3("Direction", &sl_dir.x)) { sl->setDirection(sl_dir); }
+            }
 
             if (ImGui::DragFloat3("Ambient", &pl_ambient.x, .05f, 0.0f, 1.0f)) { pl->setAmbient(pl_ambient); }
             if (ImGui::DragFloat3("Diffuse", &pl_diffuse.x, .05f, 0.0f, 1.0f)) { pl->setDiffuse(pl_diffuse); }
@@ -163,6 +181,17 @@ void settings_panel() {
             ImGui::SameLine();
             if (ImGui::DragFloat("Linear", &pl_atten.linear, .01f, 0.0)) { pl->setAttenuation(pl_atten); }
             if (ImGui::DragFloat("Quadratic", &pl_atten.quadratic, .01, 0.0)) { pl->setAttenuation(pl_atten); }
+
+
+            if (sl == nullptr) continue;
+
+            auto sl_cut_off = sl->getCutOffDeg();
+            auto sl_outer_cut_off = sl->getOuterCutOffDeg();
+
+            if (ImGui::DragFloat("CutOff Degrees", &sl_cut_off)) { sl->setCutOff(sl_cut_off); }
+            if (ImGui::DragFloat("Outer CutOff Degrees", &sl_outer_cut_off)) { sl->setOuterCutOff(sl_outer_cut_off); }
+
+
 
             ImGui::PopItemWidth();
 
@@ -208,10 +237,10 @@ void settings_panel() {
         };
 
         if (ImGui::Combo(
-                "Render Res",
-                &render_res_state,
-                res_options,
-                IM_ARRAYSIZE(res_options)
+            "Render Res",
+            &render_res_state,
+            res_options,
+            IM_ARRAYSIZE(res_options)
         )) {
             res_t r = str_to_res(res_options[render_res_state]);
 
@@ -220,10 +249,10 @@ void settings_panel() {
         }
 
         if (ImGui::Combo(
-                "Window Res",
-                &window_res_state,
-                res_options,
-                IM_ARRAYSIZE(res_options)
+            "Window Res",
+            &window_res_state,
+            res_options,
+            IM_ARRAYSIZE(res_options)
         )) {
             res_t r = str_to_res(res_options[window_res_state]);
 

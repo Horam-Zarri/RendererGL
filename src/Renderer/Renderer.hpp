@@ -109,7 +109,7 @@ constexpr static unsigned int TEXTURE_SLOT_SCREEN = 0;
 constexpr static unsigned int TEXTURE_SLOT_SKYBOX = 0;
 
 constexpr static float ASPECT_RATIO = 16.0 / 9.0;
-constexpr static unsigned int NR_MAX_POINT_LIGHTS = 10;
+constexpr static unsigned int NR_MAX_LIGHTS = 10;
 
 namespace camera {
     extern Camera CAMERA_STATE;
@@ -146,6 +146,9 @@ extern MultisampleTexture::Ptr texOffscrMSAA;
 extern Quad::Ptr screenQuad;
 extern Cube::Ptr pointLightsCube;
 
+// TODO: make me a prism or something
+extern Cube::Ptr spotLightsCube;
+
 extern Skybox::Ptr skybox;
 // proj and view
 // camera
@@ -159,9 +162,11 @@ void updateState();
 void render();
 void terminate();
 
+size_t getLightsCount(LightType lt);
+void addSpotLight();
 void addPointLight();
-void removePointLight(int index);
-const PointLight::Ptr getPointLight(int index);
+void removeLight(int index);
+const Light::Ptr getLight(int index);
 
 }
 
