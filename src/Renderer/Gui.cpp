@@ -1,5 +1,8 @@
 #include "Gui.hpp"
 #include "Lighting/Light.hpp"
+#include "Lighting/PointLight.hpp"
+#include "Lighting/SpotLight.hpp"
+
 #include "imgui.h"
 #include "Renderer.hpp"
 #include <cmath>
@@ -77,7 +80,13 @@ void settings_panel() {
     if (ImGui::TreeNode("Lighting")) {
 
         ImGui::SeparatorText("General");
-        ImGui::Checkbox("Enable Blinn", (bool*)&ENGINE_STATE.BLINN_ENBL);
+
+        ImGui::Checkbox("Blinn", (bool*)&ENGINE_STATE.BLINN_ENBL);
+
+        ImGui::Checkbox("HDR", (bool*)&ENGINE_STATE.HDR_ENBL);
+
+        if (ENGINE_STATE.HDR_ENBL)
+            ImGui::SliderFloat("Exposure", &ENGINE_STATE.HDR_EXPOSURE, 0.f, 5.f);
 
         ImGui::SeparatorText("Shadows");
 
@@ -183,15 +192,18 @@ void settings_panel() {
             if (ImGui::DragFloat("Quadratic", &pl_atten.quadratic, .01, 0.0)) { pl->setAttenuation(pl_atten); }
 
 
-            if (sl == nullptr) continue;
+            if (sl == nullptr) {
+                // necessary to sync imgui queues
+                ImGui::PopItemWidth();
+                ImGui::PopID();
+                continue;
+            }
 
             auto sl_cut_off = sl->getCutOffDeg();
             auto sl_outer_cut_off = sl->getOuterCutOffDeg();
 
             if (ImGui::DragFloat("CutOff Degrees", &sl_cut_off)) { sl->setCutOff(sl_cut_off); }
             if (ImGui::DragFloat("Outer CutOff Degrees", &sl_outer_cut_off)) { sl->setOuterCutOff(sl_outer_cut_off); }
-
-
 
             ImGui::PopItemWidth();
 

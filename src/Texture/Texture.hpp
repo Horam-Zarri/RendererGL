@@ -21,7 +21,11 @@ struct TextureConfig {
     int wrap_s;
     int wrap_r;
 
+    int msaa_multiplier;
+
     bool gamma_correction;
+    bool hdr;
+
     bool flip;
 
     TextureConfig() {
@@ -35,7 +39,11 @@ struct TextureConfig {
 
         wrap_t = wrap_s = wrap_r = GL_REPEAT;
 
+        msaa_multiplier = 4;
+
         gamma_correction = true;
+        hdr = true;
+
         flip = true;
     }
 };
@@ -77,14 +85,7 @@ public:
         TextureConfig tex_conf = TextureConfig()
     );
 
-
-    //virtual void genColorBuffer(unsigned int width, unsigned int height);
-    //virtual void genDepthBuffer(unsigned int width, unsigned int height);
-
-
     void genFromFile();
-
-    void loadFile(const std::string& path, TextureConfig tex_conf = TextureConfig());
 
     virtual void bind() const;
     virtual void unbind() const;
@@ -98,6 +99,9 @@ public:
 
     inline void setType(TextureType type) { m_Type = type; }
     inline const TextureType& getType() const { return m_Type; }
+
+    inline void setTextureConfig(const TextureConfig& tconf) { m_Config = tconf; }
+    inline const TextureConfig& getTextureConfig() const { return m_Config; }
 };
 
 #endif

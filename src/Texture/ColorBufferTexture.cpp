@@ -14,10 +14,10 @@ void ColorBufferTexture::genTexture() {
 
     glTexImage2D(
         GL_TEXTURE_2D,
-        0, GL_RGB,
+        0, m_Config.hdr ? GL_RGBA16 : GL_RGB,
         m_Width,
         m_Height,
-        0, GL_RGB,
+        0, m_Config.hdr ? GL_RGBA : GL_RGB,
         GL_UNSIGNED_BYTE,
         NULL
     );

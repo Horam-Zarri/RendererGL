@@ -1,5 +1,6 @@
 #include "Model.hpp"
 #include "Lighting/Material.hpp"
+#include "Lighting/PhongMaterial.hpp"
 #include "assimp/material.h"
 
 #include <stb_image.h>

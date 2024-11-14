@@ -12,6 +12,8 @@ uniform bool blur;
 uniform bool grayscale;
 
 uniform bool gamma;
+uniform bool hdr;
+uniform float exposure=1.0;
 
 const float offset = 1.0 / 600.0;
 
@@ -92,6 +94,9 @@ void main()
             color = vec3(avg, avg, avg);
         }
     }
+
+    if (hdr)
+        color = vec3(1.0) - exp(-color * exposure);
 
     if (gamma)
         color = pow(color, vec3(1.0/2.2));

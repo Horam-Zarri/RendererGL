@@ -22,8 +22,10 @@
 #include "Texture/DepthBufferTexture.hpp"
 #include "Texture/Texture.hpp"
 #include "Texture/MultisampleTexture.hpp"
-#include "Lighting/Light.hpp"
+#include "Lighting/PointLight.hpp"
+#include "Lighting/SpotLight.hpp"
 #include "Lighting/Material.hpp"
+#include "Lighting/PhongMaterial.hpp"
 
 #include "Skybox.hpp"
 #include "Window.hpp"
@@ -84,14 +86,16 @@ void sendLightUniforms(const Shader::Ptr& shader) {
     shader->setInt("pointLightsSize", getLightsCount(LightType::PointLight));
     shader->setInt("spotLightsSize", getLightsCount(LightType::SpotLight));
 
-    for (unsigned int i = 0; i < g_Lights.size(); ++i) {
+    unsigned int pointLightIndex = 0, spotLightIndex = 0;
 
-        LightType light_type = g_Lights[i]->getType();
+    for (const Light::Ptr& light : g_Lights) {
+
+        LightType light_type = light->getType();
 
         if (light_type == LightType::PointLight) {
-            PointLight::Ptr pl = std::dynamic_pointer_cast<PointLight, Light>(g_Lights[i]);
+            PointLight::Ptr pl = std::dynamic_pointer_cast<PointLight, Light>(light);
 
-            std::string base = "pointLights[" + std::to_string(i) + "]";
+            std::string base = "pointLights[" + std::to_string(pointLightIndex) + "]";
             shader->setVec3(base + ".position", pl->getPosition());
 
             shader->setVec3(base + ".ambient", pl->getAmbient());
@@ -103,13 +107,15 @@ void sendLightUniforms(const Shader::Ptr& shader) {
             shader->setFloat(base + ".constant", atten.constant);
             shader->setFloat(base + ".linear", atten.linear);
             shader->setFloat(base + ".quadratic", atten.quadratic);
+
+            pointLightIndex++;
         }
 
         if (light_type == LightType::SpotLight) {
 
-            SpotLight::Ptr sl = std::dynamic_pointer_cast<SpotLight, Light>(g_Lights[i]);
+            SpotLight::Ptr sl = std::dynamic_pointer_cast<SpotLight, Light>(light);
 
-            std::string base = "spotLights[" + std::to_string(i) + "]";
+            std::string base = "spotLights[" + std::to_string(spotLightIndex) + "]";
             shader->setVec3(base + ".position", sl->getPosition());
             shader->setVec3(base + ".direction", sl->getDirection());
 
@@ -125,6 +131,8 @@ void sendLightUniforms(const Shader::Ptr& shader) {
 
             shader->setFloat(base + ".cutOff", sl->getCutOff());
             shader->setFloat(base + ".outerCutOff", sl->getOuterCutOff());
+
+            spotLightIndex++;
         }
     }
 
@@ -329,8 +337,14 @@ void offscrPass() {
 
 void setupOffscrPass() {
 
+    TextureConfig texConf;
+
+    texConf.msaa_multiplier = g_Engine.MSAA_MULTIPLIER;
+    texConf.hdr = g_Engine.HDR_ENBL;
+
     fboOffscr = FrameBuffer::New();
     texOffscr = ColorBufferTexture::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+    texOffscr->setTextureConfig(texConf);
     rboOffscr = RenderBuffer::New(RBType::DEPTH_STENCIL, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
     fboOffscr->attachTexture(GL_COLOR_ATTACHMENT0, texOffscr);
@@ -344,6 +358,7 @@ void setupOffscrPass() {
 
     fboOffscrMSAA = FrameBuffer::New();
     texOffscrMSAA = MultisampleTexture::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+    texOffscrMSAA->setTextureConfig(texConf);
     rboOffscrMSAA = RenderBuffer::New(RBType::DEPTH_STENCIL_MULTISAMPLE, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
     fboOffscrMSAA->attachTexture(GL_COLOR_ATTACHMENT0, texOffscrMSAA);
@@ -419,6 +434,8 @@ void sendPostprocessUniforms() {
     shaderPostProcess->setInt("screenTexture", TEXTURE_SLOT_SCREEN);
 
     shaderPostProcess->setBool("gamma", true);
+    shaderPostProcess->setBool("hdr", g_Engine.HDR_ENBL);
+    shaderPostProcess->setFloat("exposure", g_Engine.HDR_EXPOSURE);
 
     shaderPostProcess->setBool("sharpen", g_Engine.SHARPNESS_ENBL);
     shaderPostProcess->setFloat("sharpness", g_Engine.SHARPNESS_AMOUNT);
@@ -590,7 +607,6 @@ int init() {
     pointLightsCube = Cube::New();
     spotLightsCube = Cube::New();
 
-    addSpotLight();
     // TODO: this is very ugly
 
     const std::string base = "./tex/skybox/";
@@ -657,7 +673,6 @@ void updateState() {
     if (g_Engine.GRAYSCALE_ENBL != ENGINE_STATE.GRAYSCALE_ENBL)
         g_Engine.GRAYSCALE_ENBL = ENGINE_STATE.GRAYSCALE_ENBL;
 
-
     if (g_Engine.SHADOW_ENBL != ENGINE_STATE.SHADOW_ENBL)
         g_Engine.SHADOW_ENBL = ENGINE_STATE.SHADOW_ENBL;
 
@@ -691,7 +706,23 @@ void updateState() {
         regen_buffers = true;
     }
 
+    if (g_Engine.HDR_ENBL != ENGINE_STATE.HDR_ENBL) {
+        g_Engine.HDR_ENBL = ENGINE_STATE.HDR_ENBL;
+        regen_buffers = true;
+    }
+
+    if (g_Engine.HDR_ENBL && (g_Engine.HDR_EXPOSURE != ENGINE_STATE.HDR_EXPOSURE))
+        g_Engine.HDR_EXPOSURE = ENGINE_STATE.HDR_EXPOSURE;
+
     if (regen_buffers) {
+        TextureConfig texConf;
+
+        texConf.msaa_multiplier = g_Engine.MSAA_MULTIPLIER;
+        texConf.hdr = g_Engine.HDR_ENBL;
+
+        texOffscr->setTextureConfig(texConf);
+        texOffscrMSAA->setTextureConfig(texConf);
+
         texOffscrMSAA->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
         rboOffscrMSAA->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 

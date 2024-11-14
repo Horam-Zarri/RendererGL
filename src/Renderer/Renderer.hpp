@@ -6,8 +6,9 @@
 #include "Core/Scene.hpp"
 #include "Core/Shapes/Cube.hpp"
 #include "Core/Shapes/Quad.hpp"
-#include "Lighting/Light.hpp"
 #include "Renderer/Skybox.hpp"
+#include "Lighting/Light.hpp"
+#include "Lighting/DirectionalLight.hpp"
 #include "Camera.hpp"
 #include "Texture/MultisampleTexture.hpp"
 #include "Texture/ColorBufferTexture.hpp"
@@ -53,6 +54,9 @@ struct EngineState {
     unsigned int SHADOW_WIDTH;
     unsigned int SHADOW_HEIGHT;
 
+    int HDR_ENBL;
+    float HDR_EXPOSURE;
+
     EngineState() {
         LIGHT_DIR = glm::vec3(-4.0f, -2.0f, -3.0f);
         LIGHT_AMBIENT = glm::vec3(0.1f);
@@ -93,6 +97,9 @@ struct EngineState {
 
         SHADOW_ENBL = true;
         SHADOW_WIDTH = SHADOW_HEIGHT = 1024;
+
+        HDR_ENBL = true;
+        HDR_EXPOSURE = 1.5f;
     }
 };
 
