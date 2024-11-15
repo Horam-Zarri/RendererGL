@@ -316,8 +316,8 @@ void offscrPass() {
     else
         fboOffscr->bind();
 
-
-    glClearColor(g_Engine.CLEAR_COLOR.r,g_Engine.CLEAR_COLOR.g, g_Engine.CLEAR_COLOR.b, g_Engine.CLEAR_COLOR.a); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
+    // necessary to set to black to avoid background influence on bloom pass
+    glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Draw Scene
@@ -331,11 +331,15 @@ void offscrPass() {
     // TODO: can we?
     // glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
+    glColorMaski(1, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
     shaderSkybox->use();
     shaderSkybox->setMat4("view", glm::mat4(glm::mat3(g_View)));
     shaderSkybox->setMat4("projection", g_Proj);
 
     skybox->draw();
+
+    glColorMaski(1, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
     // Draw lights cube debug
     renderLightCubes(shaderDefault);
