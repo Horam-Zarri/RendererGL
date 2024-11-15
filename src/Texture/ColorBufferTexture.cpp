@@ -14,7 +14,7 @@ void ColorBufferTexture::genTexture() {
 
     glTexImage2D(
         GL_TEXTURE_2D,
-        0, m_Config.hdr ? GL_RGBA16 : GL_RGB,
+        0, m_Config.hdr ? GL_RGBA32F : GL_RGB,
         m_Width,
         m_Height,
         0, m_Config.hdr ? GL_RGBA : GL_RGB,
@@ -24,6 +24,8 @@ void ColorBufferTexture::genTexture() {
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     unbind();
 }

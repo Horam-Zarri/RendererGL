@@ -63,27 +63,22 @@ protected:
 
 public:
 
-    inline const LightType getType() const {
-        return m_Type;
-    }
-    inline const glm::vec3& getAmbient() const {
-        return m_Ambient;
-    }
-    inline const glm::vec3& getDiffuse() const {
-        return m_Diffuse;
-    }
-    inline const glm::vec3& getSpecular() const {
-        return m_Specular;
+    inline const LightType getType() const { return m_Type; }
+
+    inline const glm::vec3& getAmbient() const { return m_Ambient; }
+    inline const glm::vec3& getDiffuse() const { return m_Diffuse; }
+    inline const glm::vec3& getSpecular() const { return m_Specular; }
+
+    inline const glm::vec3 getAveragedColor() const {
+        return glm::vec3((m_Ambient + m_Diffuse + m_Specular / 3.f));
     }
 
-    inline void setAmbient(const glm::vec3& ambient) {
-        this->m_Ambient = ambient;
-    }
-    inline void setDiffuse(const glm::vec3& diffuse) {
-        this->m_Diffuse = diffuse;
-    }
-    inline void setSpecular(const glm::vec3& specular) {
-        this->m_Specular = specular;
+    inline void setAmbient(const glm::vec3& ambient) { m_Ambient = ambient; }
+    inline void setDiffuse(const glm::vec3& diffuse) { m_Diffuse = diffuse; }
+    inline void setSpecular(const glm::vec3& specular) { m_Specular = specular; }
+
+    inline void setColor(const glm::vec3& light_color) {
+        m_Ambient = m_Diffuse = m_Specular = light_color;
     }
 };
 

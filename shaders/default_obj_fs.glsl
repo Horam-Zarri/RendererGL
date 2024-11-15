@@ -53,7 +53,8 @@ struct SpotLight {
 #define NR_POINT_LIGHTS 10
 #define NR_SPOT_LIGHTS 10
 
-out vec4 FragColor;
+layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec4 BrightColor;
 
 in VS_OUT {
     vec3 FragPos;
@@ -83,7 +84,7 @@ uniform bool hasShadow;
 uniform bool hasNormal;
 
 uniform bool blinn;
-//uniform SpotLight spotLight;
+uniform float bloomLevel=1.f;
 
 vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
@@ -116,6 +117,12 @@ void main() {
 
     FragColor = vec4(result, 1.0);
 
+    float brightness = dot(FragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+
+    BrightColor =
+        brightness > bloomLevel ?
+        vec4(FragColor.rgb, 1.0) :
+        vec4(0.0, 0.0, 0.0, 1.0);
 }
 
 

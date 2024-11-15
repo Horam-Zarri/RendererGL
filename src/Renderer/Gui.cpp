@@ -88,6 +88,9 @@ void settings_panel() {
         if (ENGINE_STATE.HDR_ENBL)
             ImGui::SliderFloat("Exposure", &ENGINE_STATE.HDR_EXPOSURE, 0.f, 5.f);
 
+        ImGui::Checkbox("Bloom", (bool*)&ENGINE_STATE.BLOOM_ENBL);
+
+
         ImGui::SeparatorText("Shadows");
 
         static int shadow_state = 1;
@@ -126,9 +129,9 @@ void settings_panel() {
 
         ImGui::PopItemWidth();
 
-        ImGui::DragFloat3("Ambient", &ENGINE_STATE.LIGHT_AMBIENT.x, .05f, 0.0f, 1.0f);
-        ImGui::DragFloat3("Diffuse", &ENGINE_STATE.LIGHT_DIFFUSE.x, .05f, 0.0f, 1.0f);
-        ImGui::DragFloat3("Specular", &ENGINE_STATE.LIGHT_SPECULAR.x, .05f, 0.0f, 1.0f);
+        ImGui::DragFloat3("Ambient", &ENGINE_STATE.LIGHT_AMBIENT.x, .05f, 0.0f);
+        ImGui::DragFloat3("Diffuse", &ENGINE_STATE.LIGHT_DIFFUSE.x, .05f, 0.0f);
+        ImGui::DragFloat3("Specular", &ENGINE_STATE.LIGHT_SPECULAR.x, .05f, 0.0f);
 
         ImGui::SeparatorText("Scene Lights");
 
@@ -179,9 +182,9 @@ void settings_panel() {
                 if (ImGui::DragFloat3("Direction", &sl_dir.x)) { sl->setDirection(sl_dir); }
             }
 
-            if (ImGui::DragFloat3("Ambient", &pl_ambient.x, .05f, 0.0f, 1.0f)) { pl->setAmbient(pl_ambient); }
-            if (ImGui::DragFloat3("Diffuse", &pl_diffuse.x, .05f, 0.0f, 1.0f)) { pl->setDiffuse(pl_diffuse); }
-            if (ImGui::DragFloat3("Specular", &pl_specular.x, .05f, 0.0f, 1.0f)) { pl->setSpecular(pl_specular); }
+            if (ImGui::DragFloat3("Ambient", &pl_ambient.x, .05f, 0.0f)) { pl->setAmbient(pl_ambient); }
+            if (ImGui::DragFloat3("Diffuse", &pl_diffuse.x, .05f, 0.0f)) { pl->setDiffuse(pl_diffuse); }
+            if (ImGui::DragFloat3("Specular", &pl_specular.x, .05f, 0.0f)) { pl->setSpecular(pl_specular); }
 
             ImGui::Spacing();
             ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.2);
@@ -280,7 +283,16 @@ void settings_panel() {
         };
 
         // not elegant, yet so robust
+        int can_enable_aa = !(ENGINE_STATE.HDR_ENBL || ENGINE_STATE.BLOOM_ENBL);
         int aa_state = ENGINE_STATE.MSAA_ENBL ? std::log2(ENGINE_STATE.MSAA_MULTIPLIER): 0;
+
+        if (!can_enable_aa) {
+            aa_state = ENGINE_STATE.MSAA_ENBL = false;
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 0, 255));
+            ImGui::Text("MSAA can not be enabled with hdr and/or bloom");
+            ImGui::PopStyleColor();
+            ImGui::BeginDisabled();
+        }
 
         if (ImGui::Combo(
             "Antialiasing",
@@ -291,6 +303,9 @@ void settings_panel() {
             ENGINE_STATE.MSAA_ENBL = aa_state == 0 ? false : true;
             ENGINE_STATE.MSAA_MULTIPLIER = std::pow(2, aa_state);
         }
+
+        if (!can_enable_aa)
+            ImGui::EndDisabled();
 
         ImGui::ColorEdit4("Clear color", &ENGINE_STATE.CLEAR_COLOR.x);
 

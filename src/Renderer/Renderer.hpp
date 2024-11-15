@@ -57,6 +57,8 @@ struct EngineState {
     int HDR_ENBL;
     float HDR_EXPOSURE;
 
+    int BLOOM_ENBL;
+
     EngineState() {
         LIGHT_DIR = glm::vec3(-4.0f, -2.0f, -3.0f);
         LIGHT_AMBIENT = glm::vec3(0.1f);
@@ -99,7 +101,9 @@ struct EngineState {
         SHADOW_WIDTH = SHADOW_HEIGHT = 1024;
 
         HDR_ENBL = true;
-        HDR_EXPOSURE = 1.5f;
+        HDR_EXPOSURE = 1.f;
+
+        BLOOM_ENBL = true;
     }
 };
 
@@ -111,6 +115,7 @@ constexpr static unsigned int TEXTURE_SLOT_NORMAL = 3;
 
 // Texture slots for shaderPostProcess
 constexpr static unsigned int TEXTURE_SLOT_SCREEN = 0;
+constexpr static unsigned int TEXTURE_SLOT_BLOOM = 1;
 
 // Texture slots for shaderSkybox
 constexpr static unsigned int TEXTURE_SLOT_SKYBOX = 0;
@@ -131,6 +136,7 @@ extern Shader::Ptr shaderPhong;
 extern Shader::Ptr shaderPostProcess;
 extern Shader::Ptr shaderSkybox;
 extern Shader::Ptr shaderShadow;
+extern Shader::Ptr shaderBlur;
 
 extern std::vector<Scene::Ptr> g_Scenes;
 extern DirectionalLight::Ptr g_SunLight;
@@ -142,13 +148,18 @@ extern glm::mat4 g_Proj;
 extern FrameBuffer::Ptr fboShadow;
 extern FrameBuffer::Ptr fboOffscrMSAA;
 extern FrameBuffer::Ptr fboOffscr;
+extern FrameBuffer::Ptr fboBlurHoriz;
+extern FrameBuffer::Ptr fboBlurVert;
 
 extern RenderBuffer::Ptr rboOffscr;
 extern RenderBuffer::Ptr rboOffscrMSAA;
 
 extern DepthBufferTexture::Ptr texShadowmap;
 extern ColorBufferTexture::Ptr texOffscr;
+extern ColorBufferTexture::Ptr texOffscrBright;
 extern MultisampleTexture::Ptr texOffscrMSAA;
+extern ColorBufferTexture::Ptr texBlurHoriz;
+extern ColorBufferTexture::Ptr texBlurVert;
 
 extern Quad::Ptr screenQuad;
 extern Cube::Ptr pointLightsCube;

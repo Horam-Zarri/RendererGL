@@ -4,6 +4,7 @@ out vec4 FragColor;
 in vec2 TexCoords;
 
 uniform sampler2D screenTexture;
+uniform sampler2D bloomTexture;
 
 uniform bool sharpen;
 uniform float sharpness;
@@ -13,6 +14,8 @@ uniform bool grayscale;
 
 uniform bool gamma;
 uniform bool hdr;
+uniform bool bloom;
+
 uniform float exposure=1.0;
 
 const float offset = 1.0 / 600.0;
@@ -94,6 +97,9 @@ void main()
             color = vec3(avg, avg, avg);
         }
     }
+
+    if (bloom)
+        color += texture(bloomTexture, TexCoords).rgb;
 
     if (hdr)
         color = vec3(1.0) - exp(-color * exposure);

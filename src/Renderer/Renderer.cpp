@@ -19,6 +19,7 @@
 
 #include "Model/Model.hpp"
 
+#include "Texture/ColorBufferTexture.hpp"
 #include "Texture/DepthBufferTexture.hpp"
 #include "Texture/Texture.hpp"
 #include "Texture/MultisampleTexture.hpp"
@@ -50,6 +51,7 @@ Shader::Ptr shaderPhong;
 Shader::Ptr shaderPostProcess;
 Shader::Ptr shaderSkybox;
 Shader::Ptr shaderShadow;
+Shader::Ptr shaderBlur;
 
 std::vector<Scene::Ptr> g_Scenes;
 DirectionalLight::Ptr g_SunLight;
@@ -61,13 +63,19 @@ glm::mat4 g_Proj;
 FrameBuffer::Ptr fboShadow;
 FrameBuffer::Ptr fboOffscrMSAA;
 FrameBuffer::Ptr fboOffscr;
+FrameBuffer::Ptr fboBlurHoriz;
+FrameBuffer::Ptr fboBlurVert;
 
 RenderBuffer::Ptr rboOffscr;
 RenderBuffer::Ptr rboOffscrMSAA;
 
 DepthBufferTexture::Ptr texShadowmap;
 ColorBufferTexture::Ptr texOffscr;
+ColorBufferTexture::Ptr texOffscrBright;
 MultisampleTexture::Ptr texOffscrMSAA;
+ColorBufferTexture::Ptr texBlurHoriz;
+ColorBufferTexture::Ptr texBlurVert;
+
 
 Quad::Ptr screenQuad;
 Cube::Ptr pointLightsCube;
@@ -153,6 +161,8 @@ void renderLightCubes(const Shader::Ptr& shader) {
 
         const auto& light = g_Lights[i];
 
+        shader->setVec3("lightColor", light->getAveragedColor());
+
         glm::mat4 md(1.0f);
 
         const LightType light_type = light->getType();
@@ -161,7 +171,7 @@ void renderLightCubes(const Shader::Ptr& shader) {
             PointLight* pl = dynamic_cast<PointLight*>(light.get());
 
             md = glm::translate(md, pl->getPosition());
-            md = glm::scale(md, glm::vec3(.5f));
+            md = glm::scale(md, glm::vec3(.25f));
 
 
             shader->setMat4("model", md);
@@ -176,7 +186,7 @@ void renderLightCubes(const Shader::Ptr& shader) {
             SpotLight* sl = dynamic_cast<SpotLight*>(light.get());
 
             md = glm::translate(md, sl->getPosition());
-            md = glm::scale(md, glm::vec3(.5f));
+            md = glm::scale(md, glm::vec3(.25f));
 
             shader->setMat4("model", md);
             shader->setMat4("view", g_View);
@@ -300,7 +310,6 @@ void offscrPass() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Draw Models
-    //offscr_shader->use();
 
     if (g_Engine.MSAA_ENBL)
         fboOffscrMSAA->bind();
@@ -318,6 +327,10 @@ void offscrPass() {
     renderScenes();
 
     // Draw skybox
+
+    // TODO: can we?
+    // glDrawBuffer(GL_COLOR_ATTACHMENT0);
+
     shaderSkybox->use();
     shaderSkybox->setMat4("view", glm::mat4(glm::mat3(g_View)));
     shaderSkybox->setMat4("projection", g_Proj);
@@ -343,14 +356,22 @@ void setupOffscrPass() {
     texConf.hdr = g_Engine.HDR_ENBL;
 
     fboOffscr = FrameBuffer::New();
+
     texOffscr = ColorBufferTexture::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+    texOffscrBright = ColorBufferTexture::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
     texOffscr->setTextureConfig(texConf);
+    texOffscrBright->setTextureConfig(texConf);
+
     rboOffscr = RenderBuffer::New(RBType::DEPTH_STENCIL, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
     fboOffscr->attachTexture(GL_COLOR_ATTACHMENT0, texOffscr);
+    fboOffscr->attachTexture(GL_COLOR_ATTACHMENT1, texOffscrBright);
     fboOffscr->attachRenderBuffer(GL_DEPTH_STENCIL_ATTACHMENT, rboOffscr);
 
     fboOffscr->bind();
+
+    unsigned int fboOffscrColorAttachments[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+    glDrawBuffers(2, fboOffscrColorAttachments);
 
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: Offscr Framebuffer is not complete!" <<
@@ -369,6 +390,7 @@ void setupOffscrPass() {
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: MSAA Framebuffer is not complete!" <<
             std::endl;
+
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -430,11 +452,70 @@ void setupShadowPass() {
     fboShadow->unbind();
 }
 
+void bloomPass() {
+
+    if (!g_Engine.BLOOM_ENBL) return;
+
+    shaderBlur->use();
+
+    bool horizontal = true;
+    unsigned int amount = 10;
+    for (unsigned int i = 0; i < amount; i++)
+    {
+        if (horizontal)
+            fboBlurHoriz->bind();
+        else
+            fboBlurVert->bind();
+
+        shaderBlur->setInt("horizontal", horizontal);
+
+        if (i == 0) // first iteration
+            texOffscrBright->bind();
+        else if (horizontal)
+            texBlurHoriz->bind();
+        else
+            texBlurVert->bind();
+
+        screenQuad->draw();
+
+        horizontal = !horizontal;
+    }
+}
+
+void setupBloomPass() {
+
+    fboBlurHoriz = FrameBuffer::New();
+    texBlurHoriz = ColorBufferTexture::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+
+    fboBlurHoriz->attachTexture(GL_COLOR_ATTACHMENT0, texBlurHoriz);
+    fboBlurHoriz->bind();
+
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Shadow map Framebuffer is not complete!" <<
+            std::endl;
+
+    fboBlurHoriz->unbind();
+
+    fboBlurVert = FrameBuffer::New();
+    texBlurVert = ColorBufferTexture::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+
+    fboBlurVert->attachTexture(GL_COLOR_ATTACHMENT0, texBlurVert);
+    fboBlurVert->bind();
+
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Shadow map Framebuffer is not complete!" <<
+            std::endl;
+
+    fboBlurVert->unbind();
+}
+
 void sendPostprocessUniforms() {
     shaderPostProcess->setInt("screenTexture", TEXTURE_SLOT_SCREEN);
+    shaderPostProcess->setInt("bloomTexture", TEXTURE_SLOT_BLOOM);
 
     shaderPostProcess->setBool("gamma", true);
     shaderPostProcess->setBool("hdr", g_Engine.HDR_ENBL);
+    shaderPostProcess->setBool("bloom", g_Engine.BLOOM_ENBL);
     shaderPostProcess->setFloat("exposure", g_Engine.HDR_EXPOSURE);
 
     shaderPostProcess->setBool("sharpen", g_Engine.SHARPNESS_ENBL);
@@ -444,6 +525,9 @@ void sendPostprocessUniforms() {
 
     texOffscr->setSlot(TEXTURE_SLOT_SCREEN);
     texOffscr->bind();
+
+    texBlurVert->setSlot(TEXTURE_SLOT_BLOOM);
+    texBlurVert->bind();
 }
 
 void postprocessPass() {
@@ -493,25 +577,14 @@ void render() {
     shaderPhong->use();
     offscrPass();
 
+    shaderBlur->use();
+    bloomPass();
+
     shaderPostProcess->use();
     postprocessPass();
 
-    //glm::mat4 model(1.0f);
-    //glm::mat4 view = camera::g_Camera.GetViewMatrix();
-    //glm::mat4 projection = glm::perspective(glm::radians(camera::g_Camera.Zoom), (float)800 / 600, 0.1f, 100.0f);
-
-
-    //light_cube_shader->use();
-
-    //model = glm::mat4(1.0f);
-    //model = glm::translate(model, g_Engine.LIGHT_DIR);
-    //model = glm::scale(model, glm::vec3(0.5f));
-    //light_cube_shader->setMat4("model", model);
-    //light_cube_shader->setMat4("view", view);
-    //light_cube_shader->setMat4("projection", projection);
-
-
 }
+
 int init() {
 
     glEnable(GL_DEPTH_TEST);
@@ -525,6 +598,7 @@ int init() {
     shaderPostProcess = Shader::New("./shaders/screen_PP_vs.glsl", "./shaders/screen_PP_fs.glsl");
     shaderSkybox = Shader::New("./shaders/skybox_vs.glsl", "./shaders/skybox_fs.glsl");
     shaderShadow = Shader::New("./shaders/shadow_map_vs.glsl", "./shaders/shadow_map_fs.glsl");
+    shaderBlur = Shader::New("./shaders/blur_vs.glsl", "./shaders/blur_fs.glsl");
 
     shaderPhong->setInt("pointLightsSize", 0);
     shaderPhong->setInt("materialMaps.diffuse", TEXTURE_SLOT_DIFFUSE);
@@ -589,8 +663,77 @@ int init() {
     test_normal->addMesh(planeN1);
     test_normal->addMesh(planeN2);
 
+    MeshGroup::Ptr test_bloom = MeshGroup::New();
+
+    Cube::Ptr floor_cube = Cube::New(),
+    cube1 = Cube::New(), cube2 = Cube::New(), cube3 = Cube::New(), cube4 = Cube::New(), cube5 = Cube::New();
+
+    floor_cube->translate(glm::vec3(0.0f, -1.0f, 0.0f));
+    floor_cube->scale(glm::vec3(12.5f, 0.5f, 12.5f));
+
+    cube1->translate(glm::vec3(0.0f, 1.5f, 0.0f));
+    cube1->scale(glm::vec3(0.5f));
+
+    cube2->translate(glm::vec3(2.0f, 0.0f, 1.0f));
+    cube2->scale(glm::vec3(0.5f));
+
+    cube3->translate(glm::vec3(-1.0f, -1.0f, 2.0f));
+    cube3->rotate(60.0f, glm::vec3(1.0, 0.0, 0.0));
+
+    cube4->translate(glm::vec3(-2.0f, 1.0f, -3.0f));
+    cube4->rotate(124.0f, glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f)));
+
+    cube5->translate(glm::vec3(-3.0f, 0.0f, 0.0f));
+    cube5->scale(glm::vec3(0.5f));
+
+
+
+    const Texture::Ptr container2_tex = Texture::New("./tex/container2.png");
+
+    cube1->addTexture(container2_tex);
+    cube2->addTexture(container2_tex);
+    cube3->addTexture(container2_tex);
+    cube4->addTexture(container2_tex);
+    cube5->addTexture(container2_tex);
+
+    floor_cube->addTexture(wood_tex);
+
+    test_bloom->addMesh(floor_cube);
+    test_bloom->addMesh(cube1);
+    test_bloom->addMesh(cube2);
+    test_bloom->addMesh(cube3);
+    test_bloom->addMesh(cube4);
+    test_bloom->addMesh(cube5);
+
+    addPointLight();
+    addPointLight();
+    addPointLight();
+    addPointLight();
+
+    // lighting info
+    // -------------
+    // positions
+    std::vector<glm::vec3> lightPositions;
+    lightPositions.push_back(glm::vec3( 0.0f, 0.5f,  1.5f));
+    lightPositions.push_back(glm::vec3(-4.0f, 0.5f, -3.0f));
+    lightPositions.push_back(glm::vec3( 3.0f, 0.5f,  1.0f));
+    lightPositions.push_back(glm::vec3(-.8f,  2.4f, -1.0f));
+    // colors
+    std::vector<glm::vec3> lightColors;
+    lightColors.push_back(glm::vec3(5.0f,   5.0f,  5.0f));
+    lightColors.push_back(glm::vec3(10.0f,  0.0f,  0.0f));
+    lightColors.push_back(glm::vec3(0.0f,   0.0f,  15.0f));
+    lightColors.push_back(glm::vec3(0.0f,   5.0f,  0.0f));
+
+    for (unsigned int i = 0; i < 4; i++) {
+        PointLight::Ptr pl = std::dynamic_pointer_cast<PointLight, Light>(g_Lights[i]);
+        pl->setPosition(lightPositions[i]);
+        pl->setColor(lightColors[i]);
+    }
+
+    scene->addGroup(test_bloom);
     //scene->addGroup(test_normal);
-    scene->addGroup(model1);
+    //scene->addGroup(model1);
     //scene->addGroup(test_shadow);
     //scene->addGroup(model2);
 
@@ -626,6 +769,7 @@ int init() {
 
     setupShadowPass();
     setupOffscrPass();
+    setupBloomPass();
     setupPostprocessPass();
 
     return 0;
@@ -711,6 +855,11 @@ void updateState() {
         regen_buffers = true;
     }
 
+    if (g_Engine.BLOOM_ENBL != ENGINE_STATE.BLOOM_ENBL) {
+        g_Engine.BLOOM_ENBL = ENGINE_STATE.BLOOM_ENBL;
+        regen_buffers = true;
+    }
+
     if (g_Engine.HDR_ENBL && (g_Engine.HDR_EXPOSURE != ENGINE_STATE.HDR_EXPOSURE))
         g_Engine.HDR_EXPOSURE = ENGINE_STATE.HDR_EXPOSURE;
 
@@ -721,9 +870,11 @@ void updateState() {
         texConf.hdr = g_Engine.HDR_ENBL;
 
         texOffscr->setTextureConfig(texConf);
+        texOffscrBright->setTextureConfig(texConf);
         texOffscrMSAA->setTextureConfig(texConf);
 
         texOffscrMSAA->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        texOffscrBright->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
         rboOffscrMSAA->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
         texOffscr->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
@@ -764,8 +915,8 @@ void addPointLight() {
 size_t getLightsCount(LightType lt) {
     size_t count = 0;
     for (const auto& light : g_Lights)
-        if (light->getType() == lt)
-            count++;
+    if (light->getType() == lt)
+        count++;
     return count;
 }
 
@@ -775,9 +926,9 @@ void removeLight(int index) {
 
 const Light::Ptr getLight(int index) {
     return
-        index < g_Lights.size() ?
-        g_Lights[index] :
-        nullptr;
+    index < g_Lights.size() ?
+    g_Lights[index] :
+    nullptr;
 }
 
 
