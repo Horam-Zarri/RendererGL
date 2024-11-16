@@ -328,9 +328,7 @@ void offscrPass() {
 
     // Draw skybox
 
-    // TODO: can we?
-    // glDrawBuffer(GL_COLOR_ATTACHMENT0);
-
+    // Disable skybox influence on bloom bright buffer
     glColorMaski(1, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
     shaderSkybox->use();
@@ -373,9 +371,7 @@ void setupOffscrPass() {
     fboOffscr->attachRenderBuffer(GL_DEPTH_STENCIL_ATTACHMENT, rboOffscr);
 
     fboOffscr->bind();
-
-    unsigned int fboOffscrColorAttachments[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-    glDrawBuffers(2, fboOffscrColorAttachments);
+    fboOffscr->setDrawBuffers({GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1});
 
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: Offscr Framebuffer is not complete!" <<

@@ -20,6 +20,12 @@ void FrameBuffer::attachRenderBuffer(int attachent_target, const RenderBuffer::P
                               GL_RENDERBUFFER, rbo->getID());
 }
 
+void FrameBuffer::setDrawBuffers(const std::vector<unsigned int>& draw_buffs)
+{
+    bind();
+    glDrawBuffers(draw_buffs.size(), draw_buffs.data());
+}
+
 void FrameBuffer::blitTo(const FrameBuffer::Ptr& other, unsigned int width, unsigned int height) {
     glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FrameBufferID);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, other->m_FrameBufferID);

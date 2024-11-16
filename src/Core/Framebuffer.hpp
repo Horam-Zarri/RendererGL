@@ -5,10 +5,11 @@
 #include "RenderBuffer.hpp"
 #include "Util/MoveOnly.hpp"
 #include "Util/Ptr.hpp"
+#include "imgui.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-
+#include <vector>
 
 class FrameBuffer {
     GENERATE_PTR(FrameBuffer)
@@ -21,6 +22,8 @@ public:
 
     void attachTexture(int attachment_target, const Texture::Ptr& texture);
     void attachRenderBuffer(int attachent_target, const RenderBuffer::Ptr& rbo);
+
+    void setDrawBuffers(const std::vector<unsigned int>& draw_buffs);
 
     void blitTo(const FrameBuffer::Ptr& other, unsigned int width, unsigned int height);
 
