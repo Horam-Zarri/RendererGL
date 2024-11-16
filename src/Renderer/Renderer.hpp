@@ -2,6 +2,7 @@
 #define RENDERER_H
 
 #include "Core/FrameBuffer.hpp"
+#include "Core/GBuffer.hpp"
 #include "Core/RenderBuffer.hpp"
 #include "Core/Scene.hpp"
 #include "Core/Shapes/Cube.hpp"
@@ -59,6 +60,8 @@ struct EngineState {
 
     int BLOOM_ENBL;
 
+    int DEFERRED_SHADING;
+
     EngineState() {
         LIGHT_DIR = glm::vec3(-4.0f, -2.0f, -3.0f);
         LIGHT_AMBIENT = glm::vec3(0.1f);
@@ -104,6 +107,8 @@ struct EngineState {
         HDR_EXPOSURE = 1.f;
 
         BLOOM_ENBL = true;
+
+        DEFERRED_SHADING = false;
     }
 };
 
@@ -137,6 +142,8 @@ extern Shader::Ptr shaderPostProcess;
 extern Shader::Ptr shaderSkybox;
 extern Shader::Ptr shaderShadow;
 extern Shader::Ptr shaderBlur;
+extern Shader::Ptr shaderGBuffer;
+extern Shader::Ptr shaderGLightPass;
 
 extern std::vector<Scene::Ptr> g_Scenes;
 extern DirectionalLight::Ptr g_SunLight;
@@ -150,6 +157,8 @@ extern FrameBuffer::Ptr fboOffscrMSAA;
 extern FrameBuffer::Ptr fboOffscr;
 extern FrameBuffer::Ptr fboBlurHoriz;
 extern FrameBuffer::Ptr fboBlurVert;
+
+extern GBuffer::Ptr fboGBuffer;
 
 extern RenderBuffer::Ptr rboOffscr;
 extern RenderBuffer::Ptr rboOffscrMSAA;

@@ -52,6 +52,8 @@ Shader::Ptr shaderPostProcess;
 Shader::Ptr shaderSkybox;
 Shader::Ptr shaderShadow;
 Shader::Ptr shaderBlur;
+Shader::Ptr shaderGBuffer;
+Shader::Ptr shaderGLightPass;
 
 std::vector<Scene::Ptr> g_Scenes;
 DirectionalLight::Ptr g_SunLight;
@@ -65,6 +67,8 @@ FrameBuffer::Ptr fboOffscrMSAA;
 FrameBuffer::Ptr fboOffscr;
 FrameBuffer::Ptr fboBlurHoriz;
 FrameBuffer::Ptr fboBlurVert;
+
+GBuffer::Ptr fboGBuffer;
 
 RenderBuffer::Ptr rboOffscr;
 RenderBuffer::Ptr rboOffscrMSAA;
@@ -201,8 +205,8 @@ void renderLightCubes(const Shader::Ptr& shader) {
 }
 
 
-void renderScenes() {
-    shaderPhong->use();
+void renderScenes(const Shader::Ptr& shader) {
+    shader->use();
     texShadowmap->bind();
 
     for (const Scene::Ptr& scene : g_Scenes) {
@@ -212,7 +216,7 @@ void renderScenes() {
                 glm::mat4 scene_model = glm::translate(scene->getModelMatrix(), g_Engine.OBJECT_POS);
                 glm::mat4 model = scene_model * mesh->getModelMatrix();
 
-                shaderPhong->setMat4("model", model);
+                shader->setMat4("model", model);
 
                 bool hasDiffuse = false, hasSpecular = false, hasNormal = false;
 
@@ -242,9 +246,9 @@ void renderScenes() {
                 }
 
 
-                shaderPhong->setBool("hasDiffuse", hasDiffuse);
-                shaderPhong->setBool("hasSpecular", hasSpecular);
-                shaderPhong->setBool("hasNormal", hasNormal);
+                shader->setBool("hasDiffuse", hasDiffuse);
+                shader->setBool("hasSpecular", hasSpecular);
+                shader->setBool("hasNormal", hasNormal);
 
                 const auto& material = mesh->getMaterial();
 
@@ -256,10 +260,10 @@ void renderScenes() {
                     }
                     else if (mat_type == MaterialType::Phong) {
                         PhongMaterial::Ptr phong_mat = std::dynamic_pointer_cast<PhongMaterial>(material);
-                        shaderPhong->setVec3("material.ambient", phong_mat->getAmbient());
-                        shaderPhong->setVec3("material.diffuse", phong_mat->getDiffuse());
-                        shaderPhong->setVec3("material.specular", phong_mat->getSpecular());
-                        shaderPhong->setFloat("material.shininess", phong_mat->getShininess());
+                        shader->setVec3("material.ambient", phong_mat->getAmbient());
+                        shader->setVec3("material.diffuse", phong_mat->getDiffuse());
+                        shader->setVec3("material.specular", phong_mat->getSpecular());
+                        shader->setFloat("material.shininess", phong_mat->getShininess());
                     }
                 }
 
@@ -288,7 +292,7 @@ void renderScenesDepth() {
 }
 
 
-void sendOffscrUniforms(const Shader::Ptr& shader) {
+void sendBackBufferUniforms(const Shader::Ptr& shader) {
     shader->setMat4("view", g_View);
     shader->setMat4("projection", g_Proj);
     shader->setVec3("viewPos", camera::g_Camera.Position);
@@ -303,6 +307,11 @@ void sendOffscrUniforms(const Shader::Ptr& shader) {
 }
 
 void offscrPass() {
+    if (g_Engine.MSAA_ENBL)
+        fboOffscrMSAA->bind();
+    else
+        fboOffscr->bind();
+
     glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
     glEnable(GL_DEPTH_TEST);
@@ -311,20 +320,16 @@ void offscrPass() {
 
     // Draw Models
 
-    if (g_Engine.MSAA_ENBL)
-        fboOffscrMSAA->bind();
-    else
-        fboOffscr->bind();
 
     // necessary to set to black to avoid background influence on bloom pass
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Draw Scene
-    sendOffscrUniforms(shaderPhong);
+    sendBackBufferUniforms(shaderPhong);
     sendLightUniforms(shaderPhong);
 
-    renderScenes();
+    renderScenes(shaderPhong);
 
     // Draw skybox
 
@@ -332,6 +337,7 @@ void offscrPass() {
     glColorMaski(1, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
     shaderSkybox->use();
+    shaderSkybox->setInt("skybox", TEXTURE_SLOT_SKYBOX);
     shaderSkybox->setMat4("view", glm::mat4(glm::mat3(g_View)));
     shaderSkybox->setMat4("projection", g_Proj);
 
@@ -551,6 +557,21 @@ void setupPostprocessPass() {
     screenQuad = Quad::New();
 }
 
+void gPass() {
+    fboGBuffer->bind();
+
+    glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+    glEnable(GL_DEPTH_TEST);
+
+    glClearColor(0.0, 0.0, 0.0, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    sendBackBufferUniforms(shaderGBuffer);
+}
+void setupGPass() {
+    fboGBuffer = GBuffer::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+}
+
 void render() {
 
     using namespace window;
@@ -573,9 +594,12 @@ void render() {
     shaderShadow->use();
     shadowPass();
 
-
-    shaderPhong->use();
-    offscrPass();
+    if (g_Engine.DEFERRED_SHADING)
+        gPass();
+    else {
+        shaderPhong->use();
+        offscrPass();
+    }
 
     shaderBlur->use();
     bloomPass();
@@ -599,13 +623,8 @@ int init() {
     shaderSkybox = Shader::New("./shaders/skybox_vs.glsl", "./shaders/skybox_fs.glsl");
     shaderShadow = Shader::New("./shaders/shadow_map_vs.glsl", "./shaders/shadow_map_fs.glsl");
     shaderBlur = Shader::New("./shaders/blur_vs.glsl", "./shaders/blur_fs.glsl");
-
-    shaderPhong->setInt("pointLightsSize", 0);
-    shaderPhong->setInt("materialMaps.diffuse", TEXTURE_SLOT_DIFFUSE);
-    shaderPhong->setInt("materialMaps.specular", TEXTURE_SLOT_SPECULAR);
-    shaderPhong->setInt("materialMaps.shadow", TEXTURE_SLOT_SHADOW);
-
-    shaderSkybox->setInt("skybox", TEXTURE_SLOT_SKYBOX);
+    shaderGBuffer = Shader::New("./shaders/g_buffer_vs.glsl", "./shaders/g_buffer_fs.glsl");
+    shaderGLightPass = Shader::New("./shaders/screen_PP_vs.glsl", "./shaders/default_obj_fs.glsl");
 
     Scene::Ptr scene = Scene::New();
 
@@ -769,6 +788,7 @@ int init() {
 
     setupShadowPass();
     setupOffscrPass();
+    setupGPass();
     setupBloomPass();
     setupPostprocessPass();
 
