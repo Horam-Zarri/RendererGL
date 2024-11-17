@@ -1,11 +1,13 @@
 #include "MultisampleTexture.hpp"
 
-MultisampleTexture::MultisampleTexture(unsigned int width, unsigned int height)
-    : Texture::Texture()
+MultisampleTexture::MultisampleTexture(
+    unsigned int width,
+    unsigned int height
+) :
+    Texture::Texture(TextureType::ColorAttachMultisample, TextureConfig())
 {
     m_Width = width;
     m_Height = height;
-    m_Type = TextureType::ColorAttachMultisample;
 
     genTexture();
 }

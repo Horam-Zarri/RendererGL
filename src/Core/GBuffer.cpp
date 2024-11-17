@@ -4,10 +4,15 @@
 GBuffer::GBuffer(unsigned int width, unsigned int height)
     : FrameBuffer()
 {
-    m_PositionBuffer = ColorBufferTexture::New(width, height);
-    m_NormalBuffer = ColorBufferTexture::New(width, height);
-    m_AlbedoSpecBuffer = ColorBufferTexture::New(width, height);
-    m_PositionLightSpace = ColorBufferTexture::New(width, height);
+
+    TextureConfig tconf;
+    tconf.min_filter = tconf.mag_filter = GL_NEAREST;
+    tconf.wrap_s = tconf.wrap_t = GL_CLAMP_TO_EDGE;
+
+    m_PositionBuffer = ColorBufferTexture::New(width, height, tconf);
+    m_NormalBuffer = ColorBufferTexture::New(width, height, tconf);
+    m_AlbedoSpecBuffer = ColorBufferTexture::New(width, height, tconf);
+    m_PositionLightSpace = ColorBufferTexture::New(width, height, tconf);
 
     m_RBO = RenderBuffer::New(RBType::DEPTH_STENCIL, width, height);
 
@@ -42,4 +47,14 @@ void GBuffer::bindTextures()
     m_NormalBuffer->bind();
     m_AlbedoSpecBuffer->bind();
     m_PositionLightSpace->bind();
+}
+
+void GBuffer::resize(unsigned int width, unsigned int height)
+{
+    m_PositionBuffer->resize(width, height);
+    m_NormalBuffer->resize(width, height);
+    m_AlbedoSpecBuffer->resize(width, height);
+    m_PositionLightSpace->resize(width, height);
+
+    m_RBO->resize(width, height);
 }

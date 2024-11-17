@@ -72,7 +72,7 @@ protected:
     static GLenum getInternalFormat(int nrComponents, bool gamma_correction);
     static GLenum getDataFormat(int nrComponents);
 
-    Texture();
+    Texture(TextureType ttype, TextureConfig tconf);
 
     virtual void genTexture();
 public:

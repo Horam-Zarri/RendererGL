@@ -3,12 +3,9 @@
 #include <stb_image.h>
 #include "Texture/Texture.hpp"
 
-CubeMapTexture::CubeMapTexture(const std::array<std::string, 6>& faces, TextureConfig tex_conf):
-    Texture(), m_Paths{faces}
+CubeMapTexture::CubeMapTexture(const std::array<std::string, 6>& faces, TextureConfig tconf):
+    Texture(TextureType::CubeMap, tconf), m_Paths{faces}
 {
-    m_Config = tex_conf;
-    m_Type = TextureType::CubeMap;
-
     genTexture();
 }
 

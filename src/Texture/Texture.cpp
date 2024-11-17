@@ -31,7 +31,9 @@ GLenum Texture::getDataFormat(int nrComponents) {
     return -1;
 }
 
-Texture::Texture(): m_Type{TextureType::None}
+Texture::Texture(TextureType ttype, TextureConfig tconf):
+    m_Type{ttype},
+    m_Config{tconf}
 {
     glGenTextures(1, &m_TextureID);
     std::cout << "TEX GENERATED FOR " << m_TextureID << std::endl;

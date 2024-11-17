@@ -1,10 +1,14 @@
 #include "ColorBufferTexture.hpp"
 
-ColorBufferTexture::ColorBufferTexture(unsigned int width, unsigned int height)
+ColorBufferTexture::ColorBufferTexture(
+    unsigned int width,
+    unsigned int height,
+    TextureConfig tconf
+) :
+    Texture(TextureType::ColorAttach, tconf)
 {
     m_Width = width;
     m_Height = height;
-    m_Type = TextureType::ColorAttach;
 
     genTexture();
 }
@@ -22,10 +26,10 @@ void ColorBufferTexture::genTexture() {
         NULL
     );
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_Config.min_filter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, m_Config.mag_filter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, m_Config.wrap_s);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, m_Config.wrap_t);
 
     unbind();
 }

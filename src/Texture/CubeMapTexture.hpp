@@ -21,7 +21,7 @@ public:
 
     CubeMapTexture(
         const std::array<std::string, 6>& faces,
-        TextureConfig tex_conf = TextureConfig()
+        TextureConfig tconf = TextureConfig()
     );
 
     void bind() const override;

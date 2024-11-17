@@ -21,6 +21,7 @@ private:
 public:
     GBuffer(unsigned int width, unsigned int height);
     void bindTextures();
+    void resize(unsigned int width, unsigned int height);
 };
 
 #endif

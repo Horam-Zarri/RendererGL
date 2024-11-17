@@ -81,6 +81,8 @@ void settings_panel() {
 
         ImGui::SeparatorText("General");
 
+        ImGui::Checkbox("Deferred Shading", (bool*)&ENGINE_STATE.DEFERRED_SHADING);
+
         ImGui::Checkbox("Blinn", (bool*)&ENGINE_STATE.BLINN_ENBL);
 
         ImGui::Checkbox("HDR", (bool*)&ENGINE_STATE.HDR_ENBL);

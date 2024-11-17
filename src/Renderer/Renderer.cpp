@@ -31,6 +31,7 @@
 #include "Skybox.hpp"
 #include "Window.hpp"
 #include "glm/ext/matrix_clip_space.hpp"
+#include "imgui.h"
 
 #include <memory>
 #include <ostream>
@@ -285,6 +286,8 @@ void renderScenesDepth() {
 
 
 void sendOffscrUniforms(const Shader::Ptr& shader) {
+    shader->setBool("deferred", false);
+
     shader->setMat4("view", g_View);
     shader->setMat4("projection", g_Proj);
     shader->setVec3("viewPos", camera::g_Camera.Position);
@@ -351,6 +354,7 @@ void backBufferPass() {
 
         fboGBuffer->blitDepthTo(fboOffscr, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
     } else {
+        shaderPhong->use();
         sendOffscrUniforms(shaderPhong);
         sendLightUniforms(shaderPhong);
         renderScenes(shaderPhong);
@@ -382,17 +386,19 @@ void backBufferPass() {
 
 void setupOffscrPass() {
 
-    TextureConfig texConf;
-
-    texConf.msaa_multiplier = g_Engine.MSAA_MULTIPLIER;
-    texConf.hdr = g_Engine.HDR_ENBL;
-
     fboOffscr = FrameBuffer::New();
 
     texOffscr = ColorBufferTexture::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
     texOffscrBright = ColorBufferTexture::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-    texOffscr->setTextureConfig(texConf);
-    texOffscrBright->setTextureConfig(texConf);
+
+    TextureConfig
+        texOffscr_TConf = texOffscr->getTextureConfig(),
+        texOffscrBright_TConf = texOffscrBright->getTextureConfig();
+
+    texOffscr_TConf.hdr = texOffscrBright_TConf.hdr = g_Engine.HDR_ENBL;
+
+    texOffscr->setTextureConfig(texOffscr_TConf);
+    texOffscrBright->setTextureConfig(texOffscrBright_TConf);
 
     rboOffscr = RenderBuffer::New(RBType::DEPTH_STENCIL, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
@@ -409,7 +415,10 @@ void setupOffscrPass() {
 
     fboOffscrMSAA = FrameBuffer::New();
     texOffscrMSAA = MultisampleTexture::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-    texOffscrMSAA->setTextureConfig(texConf);
+
+    TextureConfig texOffscrMSAA_TConf = texOffscrMSAA->getTextureConfig();
+    texOffscrMSAA_TConf.msaa_multiplier = g_Engine.MSAA_MULTIPLIER;
+    texOffscrMSAA->setTextureConfig(texOffscrMSAA_TConf);
     rboOffscrMSAA = RenderBuffer::New(RBType::DEPTH_STENCIL_MULTISAMPLE, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
     fboOffscrMSAA->attachTexture(GL_COLOR_ATTACHMENT0, texOffscrMSAA);
@@ -439,6 +448,8 @@ void shadowPass() {
     shaderGLightPass->setBool("hasShadow", shadowMapping);
 
     if (!shadowMapping) return;
+
+    shaderShadow->use();
 
     float near_plane = 1.0f, far_plane = 27.5f;
     glm::mat4 lightProj = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, near_plane, far_plane);
@@ -629,21 +640,11 @@ void render() {
     g_Proj = glm::perspective(camera::g_Camera.Fov(),
                               ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE);
 
-    shaderShadow->use();
     shadowPass();
-
-    if (g_Engine.DEFERRED_SHADING)
-        geometryPass();
-
-    shaderPhong->use();
+    if (g_Engine.DEFERRED_SHADING) geometryPass();
     backBufferPass();
-
-    shaderBlur->use();
     bloomPass();
-
-    shaderPostProcess->use();
     postprocessPass();
-
 }
 
 int init() {
@@ -920,15 +921,26 @@ void updateState() {
     if (g_Engine.HDR_ENBL && (g_Engine.HDR_EXPOSURE != ENGINE_STATE.HDR_EXPOSURE))
         g_Engine.HDR_EXPOSURE = ENGINE_STATE.HDR_EXPOSURE;
 
+    if (g_Engine.DEFERRED_SHADING != ENGINE_STATE.DEFERRED_SHADING) {
+        g_Engine.DEFERRED_SHADING = ENGINE_STATE.DEFERRED_SHADING;
+        regen_buffers = true;
+    }
+
     if (regen_buffers) {
-        TextureConfig texConf;
 
-        texConf.msaa_multiplier = g_Engine.MSAA_MULTIPLIER;
-        texConf.hdr = g_Engine.HDR_ENBL;
+        TextureConfig
+            texOffscr_TConf = texOffscr->getTextureConfig(),
+            texOffscrBright_TConf = texOffscrBright->getTextureConfig(),
+            texOffscrMSAA_TConf = texOffscrMSAA->getTextureConfig();
 
-        texOffscr->setTextureConfig(texConf);
-        texOffscrBright->setTextureConfig(texConf);
-        texOffscrMSAA->setTextureConfig(texConf);
+        texOffscr_TConf.hdr = texOffscrBright_TConf.hdr = texOffscrMSAA_TConf.hdr
+            = g_Engine.HDR_ENBL;
+
+        texOffscrMSAA_TConf.msaa_multiplier = g_Engine.MSAA_MULTIPLIER;
+
+        texOffscr->setTextureConfig(texOffscr_TConf);
+        texOffscrBright->setTextureConfig(texOffscrBright_TConf);
+        texOffscrMSAA->setTextureConfig(texOffscrMSAA_TConf);
 
         texOffscrMSAA->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
         texOffscrBright->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
@@ -936,6 +948,11 @@ void updateState() {
 
         texOffscr->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
         rboOffscr->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+
+        texBlurHoriz->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        texBlurVert->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+
+        fboGBuffer->resize(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
     }
 
     if (g_Engine.SCREEN_WIDTH != ENGINE_STATE.SCREEN_WIDTH) {

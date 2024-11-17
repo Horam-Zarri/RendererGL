@@ -1,10 +1,13 @@
 #include "DepthBufferTexture.hpp"
 
-DepthBufferTexture::DepthBufferTexture(unsigned int width, unsigned int height)
+DepthBufferTexture::DepthBufferTexture(
+    unsigned int width,
+    unsigned int height
+) :
+    Texture(TextureType::DepthAttach, TextureConfig())
 {
     m_Width = width;
     m_Height = height;
-    m_Type = TextureType::DepthAttach;
 
     genTexture();
 }

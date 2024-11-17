@@ -108,7 +108,7 @@ struct EngineState {
 
         BLOOM_ENBL = true;
 
-        DEFERRED_SHADING = true;
+        DEFERRED_SHADING = false;
     }
 };
 
