@@ -14,7 +14,8 @@ void FrameBuffer::attachTexture(int attachment_target, const Texture::Ptr& textu
                            texture->getID(), 0);
 }
 
-void FrameBuffer::attachRenderBuffer(int attachent_target, const RenderBuffer::Ptr& rbo) {
+void FrameBuffer::attachRenderBuffer(int attachent_target, const RenderBuffer::Ptr& rbo)
+{
     bind();
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachent_target,
                               GL_RENDERBUFFER, rbo->getID());
@@ -26,10 +27,20 @@ void FrameBuffer::setDrawBuffers(const std::vector<unsigned int>& draw_buffs)
     glDrawBuffers(draw_buffs.size(), draw_buffs.data());
 }
 
-void FrameBuffer::blitTo(const FrameBuffer::Ptr& other, unsigned int width, unsigned int height) {
+void FrameBuffer::blitColorTo(const FrameBuffer::Ptr& other, unsigned int width, unsigned int height)
+{
     glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FrameBufferID);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, other->m_FrameBufferID);
 
     glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
                       GL_COLOR_BUFFER_BIT, GL_NEAREST);
+}
+
+void FrameBuffer::blitDepthTo(const FrameBuffer::Ptr& other, unsigned int width, unsigned int height)
+{
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FrameBufferID);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, other->m_FrameBufferID);
+
+    glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
+                      GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 }

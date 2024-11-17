@@ -61,6 +61,7 @@ std::vector<Light::Ptr> g_Lights;
 
 glm::mat4 g_View;
 glm::mat4 g_Proj;
+glm::mat4 g_LightSpaceMatrix;
 
 FrameBuffer::Ptr fboShadow;
 FrameBuffer::Ptr fboOffscrMSAA;
@@ -86,9 +87,6 @@ Cube::Ptr pointLightsCube;
 Cube::Ptr spotLightsCube;
 
 Skybox::Ptr skybox;
-
-
-static glm::mat4 lightSpaceMatrix;
 
 
 void sendLightUniforms(const Shader::Ptr& shader) {
@@ -157,9 +155,6 @@ void sendLightUniforms(const Shader::Ptr& shader) {
 }
 
 void renderLightCubes(const Shader::Ptr& shader) {
-    // light cubes should be always visible
-    glDisable(GL_DEPTH_TEST);
-
     shader->use();
     for (unsigned int i = 0; i < g_Lights.size(); ++i) {
 
@@ -199,9 +194,6 @@ void renderLightCubes(const Shader::Ptr& shader) {
             spotLightsCube->draw();
         }
     }
-
-    // crucial to re enable depth test after light cubes draw
-    glEnable(GL_DEPTH_TEST);
 }
 
 
@@ -292,13 +284,13 @@ void renderScenesDepth() {
 }
 
 
-void sendBackBufferUniforms(const Shader::Ptr& shader) {
+void sendOffscrUniforms(const Shader::Ptr& shader) {
     shader->setMat4("view", g_View);
     shader->setMat4("projection", g_Proj);
     shader->setVec3("viewPos", camera::g_Camera.Position);
     shader->setBool("hasShadow", g_Engine.SHADOW_ENBL);
 
-    shader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+    shader->setMat4("lightSpaceMatrix", g_LightSpaceMatrix);
 
     shader->setInt("materialMaps.diffuse", TEXTURE_SLOT_DIFFUSE);
     shader->setInt("materialMaps.specular", TEXTURE_SLOT_SPECULAR);
@@ -306,7 +298,25 @@ void sendBackBufferUniforms(const Shader::Ptr& shader) {
     shader->setInt("materialMaps.normal", TEXTURE_SLOT_NORMAL);
 }
 
-void offscrPass() {
+void sendLightPassUniforms(const Shader::Ptr& shader) {
+    shader->setBool("deferred", true);
+
+    shader->setVec3("viewPos", camera::g_Camera.Position);
+    shader->setBool("hasShadow", g_Engine.SHADOW_ENBL);
+
+    shader->setInt("materialMaps.diffuse", TEXTURE_SLOT_UNBOUND);
+    shader->setInt("materialMaps.specular", TEXTURE_SLOT_UNBOUND);
+    shader->setInt("materialMaps.normal", TEXTURE_SLOT_UNBOUND);
+
+    shader->setInt("materialMaps.shadow", TEXTURE_SLOT_SHADOW);
+
+    shader->setInt("deferredMaps.gPosition", TEXTURE_SLOT_DEFERRED_POSITION);
+    shader->setInt("deferredMaps.gNormal", TEXTURE_SLOT_DEFERRED_NORMAL);
+    shader->setInt("deferredMaps.gAlbedoSpec", TEXTURE_SLOT_DEFERRED_ALBEDOSPEC);
+    shader->setInt("deferredMaps.gPositionLightSpace", TEXTURE_SLOT_DEFERRED_POSITION_LIGHT_SPACE);
+}
+
+void backBufferPass() {
     if (g_Engine.MSAA_ENBL)
         fboOffscrMSAA->bind();
     else
@@ -326,13 +336,27 @@ void offscrPass() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Draw Scene
-    sendBackBufferUniforms(shaderPhong);
-    sendLightUniforms(shaderPhong);
 
-    renderScenes(shaderPhong);
+    if (g_Engine.DEFERRED_SHADING) {
+        shaderGLightPass->use();
+        fboGBuffer->bindTextures();
+        texShadowmap->bind();
+        sendLightPassUniforms(shaderGLightPass);
+        sendLightUniforms(shaderGLightPass);
+
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        screenQuad->draw();
+
+        fboGBuffer->blitDepthTo(fboOffscr, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+    } else {
+        sendOffscrUniforms(shaderPhong);
+        sendLightUniforms(shaderPhong);
+        renderScenes(shaderPhong);
+    }
 
     // Draw skybox
-
     // Disable skybox influence on bloom bright buffer
     glColorMaski(1, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
@@ -349,7 +373,7 @@ void offscrPass() {
     renderLightCubes(shaderDefault);
 
     if (g_Engine.MSAA_ENBL)
-        fboOffscrMSAA->blitTo(fboOffscr, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+        fboOffscrMSAA->blitColorTo(fboOffscr, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -412,6 +436,7 @@ void shadowPass() {
 
     bool shadowMapping = g_Engine.SHADOW_ENBL;
     shaderPhong->setBool("hasShadow", shadowMapping);
+    shaderGLightPass->setBool("hasShadow", shadowMapping);
 
     if (!shadowMapping) return;
 
@@ -423,10 +448,10 @@ void shadowPass() {
         glm::vec3(0.0, 1.0, 0.0)
     );
 
-    lightSpaceMatrix = lightProj * lightView;
+    g_LightSpaceMatrix = lightProj * lightView;
 
 
-    shaderShadow->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+    shaderShadow->setMat4("lightSpaceMatrix", g_LightSpaceMatrix);
 
     // TODO: A mechanism to improve peter panning without removing 2d things
 
@@ -557,8 +582,9 @@ void setupPostprocessPass() {
     screenQuad = Quad::New();
 }
 
-void gPass() {
+void geometryPass() {
     fboGBuffer->bind();
+    shaderGBuffer->use();
 
     glViewport(0, 0, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
     glEnable(GL_DEPTH_TEST);
@@ -566,9 +592,21 @@ void gPass() {
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    sendBackBufferUniforms(shaderGBuffer);
+    // Draw Scene
+    sendOffscrUniforms(shaderGBuffer);
+    renderScenes(shaderGBuffer);
+
+    // Draw skybox
+
+    shaderSkybox->use();
+    shaderSkybox->setInt("skybox", TEXTURE_SLOT_SKYBOX);
+    shaderSkybox->setMat4("view", glm::mat4(glm::mat3(g_View)));
+    shaderSkybox->setMat4("projection", g_Proj);
+
+    fboGBuffer->unbind();
 }
-void setupGPass() {
+
+void setupGeometryPass() {
     fboGBuffer = GBuffer::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 }
 
@@ -595,11 +633,10 @@ void render() {
     shadowPass();
 
     if (g_Engine.DEFERRED_SHADING)
-        gPass();
-    else {
-        shaderPhong->use();
-        offscrPass();
-    }
+        geometryPass();
+
+    shaderPhong->use();
+    backBufferPass();
 
     shaderBlur->use();
     bloomPass();
@@ -624,7 +661,7 @@ int init() {
     shaderShadow = Shader::New("./shaders/shadow_map_vs.glsl", "./shaders/shadow_map_fs.glsl");
     shaderBlur = Shader::New("./shaders/blur_vs.glsl", "./shaders/blur_fs.glsl");
     shaderGBuffer = Shader::New("./shaders/g_buffer_vs.glsl", "./shaders/g_buffer_fs.glsl");
-    shaderGLightPass = Shader::New("./shaders/screen_PP_vs.glsl", "./shaders/default_obj_fs.glsl");
+    shaderGLightPass = Shader::New("./shaders/g_light_pass_vs.glsl", "./shaders/default_obj_fs.glsl");
 
     Scene::Ptr scene = Scene::New();
 
@@ -724,10 +761,10 @@ int init() {
     test_bloom->addMesh(cube4);
     test_bloom->addMesh(cube5);
 
-    addPointLight();
-    addPointLight();
-    addPointLight();
-    addPointLight();
+    //addPointLight();
+    //addPointLight();
+    //addPointLight();
+    //addPointLight();
 
     // lighting info
     // -------------
@@ -744,15 +781,15 @@ int init() {
     lightColors.push_back(glm::vec3(0.0f,   0.0f,  15.0f));
     lightColors.push_back(glm::vec3(0.0f,   5.0f,  0.0f));
 
-    for (unsigned int i = 0; i < 4; i++) {
-        PointLight::Ptr pl = std::dynamic_pointer_cast<PointLight, Light>(g_Lights[i]);
-        pl->setPosition(lightPositions[i]);
-        pl->setColor(lightColors[i]);
-    }
+    //for (unsigned int i = 0; i < 4; i++) {
+    //    PointLight::Ptr pl = std::dynamic_pointer_cast<PointLight, Light>(g_Lights[i]);
+    //    pl->setPosition(lightPositions[i]);
+    //    pl->setColor(lightColors[i]);
+    //}
 
-    scene->addGroup(test_bloom);
+    //scene->addGroup(test_bloom);
     //scene->addGroup(test_normal);
-    //scene->addGroup(model1);
+    scene->addGroup(model1);
     //scene->addGroup(test_shadow);
     //scene->addGroup(model2);
 
@@ -788,7 +825,7 @@ int init() {
 
     setupShadowPass();
     setupOffscrPass();
-    setupGPass();
+    setupGeometryPass();
     setupBloomPass();
     setupPostprocessPass();
 

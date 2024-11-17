@@ -15,6 +15,13 @@ struct MaterialTexture {
     sampler2D normal;
 };
 
+struct DeferredTexture {
+    sampler2D gPosition;
+    sampler2D gNormal;
+    sampler2D gAlbedoSpec;
+    sampler2D gPositionLightSpace;
+};
+
 struct DirectionalLight {
     vec3 direction;
 
@@ -70,6 +77,9 @@ uniform vec3 viewPos;
 
 uniform MaterialSolid material;
 uniform MaterialTexture materialMaps;
+uniform DeferredTexture deferredMaps;
+
+uniform bool deferred;
 
 uniform DirectionalLight directionalLight;
 
@@ -84,7 +94,7 @@ uniform bool hasShadow;
 uniform bool hasNormal;
 
 uniform bool blinn;
-uniform float bloomLevel=1.f;
+uniform float bloomLevel=1.2f;
 
 vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
@@ -94,26 +104,32 @@ float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir);
 
 void main() {
 
-    vec3 norm;
+    vec3 _FragPos, _Normal;
 
-    if (hasNormal) {
-        norm = texture(materialMaps.normal, fs_in.TexCoords).rgb;
-        norm = norm * 2.0 - 1.0;
-        norm = normalize(fs_in.TBN * norm);
-    } else
-        norm = normalize(fs_in.Normal);
+    if (deferred) {
+        _FragPos = texture(deferredMaps.gPosition, fs_in.TexCoords).rgb;
+        _Normal = texture(deferredMaps.gNormal, fs_in.TexCoords).rgb;
+    } else {
+        _FragPos = fs_in.FragPos;
+        if (hasNormal) {
+            _Normal = texture(materialMaps.normal, fs_in.TexCoords).rgb;
+            _Normal = _Normal * 2.0 - 1.0;
+            _Normal = normalize(fs_in.TBN * _Normal);
+        } else
+            _Normal = normalize(fs_in.Normal);
+    }
 
-    vec3 viewDir = normalize(viewPos - fs_in.FragPos);
+    vec3 viewDir = normalize(viewPos - _FragPos);
 
-    vec3 result = CalcDirLight(directionalLight, norm, viewDir);
+    vec3 result = CalcDirLight(directionalLight, _Normal, viewDir);
 
     // phase 2: point lights
     for(int i = 0; i < pointLightsSize; i++)
-        result += CalcPointLight(pointLights[i], norm, fs_in.FragPos, viewDir);
+        result += CalcPointLight(pointLights[i], _Normal, _FragPos, viewDir);
 
     // phase 3: spot lights
     for(int i = 0; i < spotLightsSize; i++)
-        result += CalcSpotLight(spotLights[i], norm, fs_in.FragPos, viewDir);
+        result += CalcSpotLight(spotLights[i], _Normal, _FragPos, viewDir);
 
     FragColor = vec4(result, 1.0);
 
@@ -147,7 +163,13 @@ vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir) {
 
     vec3 ambient, diffuse, specular;
 
-    if (hasDiffuse) {
+    if (deferred) {
+        ambient = light.ambient * texture(deferredMaps.gAlbedoSpec, fs_in.TexCoords).rgb;
+        diffuse = light.diffuse * diff * texture(deferredMaps.gAlbedoSpec, fs_in.TexCoords).rgb;
+
+        if (hasSpecular)
+            specular = light.specular * spec * texture(deferredMaps.gAlbedoSpec, fs_in.TexCoords).a;
+    } else if (hasDiffuse) {
         ambient = light.ambient * vec3(texture(materialMaps.diffuse, fs_in.TexCoords));
         diffuse = light.diffuse * diff * vec3(texture(materialMaps.diffuse, fs_in.TexCoords));
 
@@ -163,8 +185,14 @@ vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir) {
     vec3 lighting;
 
     if (hasShadow) {
-        float shadow = ShadowCalculation(fs_in.FragPosLightSpace, normal, lightDir);
+        vec4 _FragPosLightSpace =
+            deferred ?
+            texture(deferredMaps.gPositionLightSpace, fs_in.TexCoords) :
+            fs_in.FragPosLightSpace;
+
+        float shadow = ShadowCalculation(_FragPosLightSpace, normal, lightDir);
         lighting = (ambient + (1.0 - shadow) * (diffuse + specular));
+        //return vec3(1.0, 0.0, 0.0);
     } else {
         lighting = ambient + diffuse + specular;
     }
@@ -195,7 +223,14 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 
     vec3 ambient, diffuse, specular;
 
-    if (hasDiffuse) {
+    if (deferred) {
+        ambient = light.ambient * texture(deferredMaps.gAlbedoSpec, fs_in.TexCoords).rgb;
+        diffuse = light.diffuse * diff * texture(deferredMaps.gAlbedoSpec, fs_in.TexCoords).rgb;
+
+        if (hasSpecular)
+            specular = light.specular * spec * texture(deferredMaps.gAlbedoSpec, fs_in.TexCoords).a;
+    }
+    else if (hasDiffuse) {
         ambient = light.ambient * vec3(texture(materialMaps.diffuse, fs_in.TexCoords));
         diffuse = light.diffuse * diff * vec3(texture(materialMaps.diffuse, fs_in.TexCoords));
 
@@ -286,4 +321,5 @@ float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir) {
     shadow /= 9.0;
 
     return shadow;
+
 }

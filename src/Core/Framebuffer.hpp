@@ -25,7 +25,8 @@ public:
 
     void setDrawBuffers(const std::vector<unsigned int>& draw_buffs);
 
-    void blitTo(const FrameBuffer::Ptr& other, unsigned int width, unsigned int height);
+    void blitColorTo(const FrameBuffer::Ptr& other, unsigned int width, unsigned int height);
+    void blitDepthTo(const FrameBuffer::Ptr& other, unsigned int width, unsigned int height);
 
     inline void bind() const {
         glBindFramebuffer(GL_FRAMEBUFFER, m_FrameBufferID);

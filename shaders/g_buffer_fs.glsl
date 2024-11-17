@@ -55,5 +55,5 @@ void main()
     if (hasSpecular)
         gAlbedoSpec.a = texture(materialMaps.specular, fs_in.TexCoords).r;
     else
-        gAlbedoSpec.a = dot(material.specular, vec3(1.0)) / 3.0;
+        gAlbedoSpec.a = 0.0;
 }

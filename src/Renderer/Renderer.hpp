@@ -108,7 +108,7 @@ struct EngineState {
 
         BLOOM_ENBL = true;
 
-        DEFERRED_SHADING = false;
+        DEFERRED_SHADING = true;
     }
 };
 
@@ -117,6 +117,13 @@ constexpr static unsigned int TEXTURE_SLOT_DIFFUSE = 0;
 constexpr static unsigned int TEXTURE_SLOT_SPECULAR = 1;
 constexpr static unsigned int TEXTURE_SLOT_SHADOW = 2;
 constexpr static unsigned int TEXTURE_SLOT_NORMAL = 3;
+
+constexpr static unsigned int TEXTURE_SLOT_DEFERRED_POSITION = 5;
+constexpr static unsigned int TEXTURE_SLOT_DEFERRED_NORMAL = 6;
+constexpr static unsigned int TEXTURE_SLOT_DEFERRED_ALBEDOSPEC = 7;
+constexpr static unsigned int TEXTURE_SLOT_DEFERRED_POSITION_LIGHT_SPACE = 8;
+
+constexpr static unsigned int TEXTURE_SLOT_UNBOUND = 15;
 
 // Texture slots for shaderPostProcess
 constexpr static unsigned int TEXTURE_SLOT_SCREEN = 0;
@@ -151,6 +158,7 @@ extern std::vector<Light::Ptr> g_Lights;
 
 extern glm::mat4 g_View;
 extern glm::mat4 g_Proj;
+extern glm::mat4 g_LightSpaceMatrix;
 
 extern FrameBuffer::Ptr fboShadow;
 extern FrameBuffer::Ptr fboOffscrMSAA;
