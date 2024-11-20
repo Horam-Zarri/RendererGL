@@ -17,7 +17,7 @@ public:
     unsigned int ID;
     // constructor generates the shader on the fly
     // ------------------------------------------------------------------------
-    Shader(const char* vertexPath, const char* fragmentPath, const char* geometryPath = nullptr);
+    Shader(const std::string& vertexPath, const std::string& fragmentPath, const std::string& geometryPath = "");
     void use();
 
 

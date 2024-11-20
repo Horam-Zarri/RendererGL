@@ -655,14 +655,43 @@ int init() {
     glEnable(GL_STENCIL_TEST);
     //glEnable(GL_CULL_FACE);
 
-    shaderDefault = Shader::New("./shaders/light_cube_vs.glsl", "./shaders/light_cube_fs.glsl");
-    shaderPhong = Shader::New("./shaders/default_obj_vs.glsl", "./shaders/default_obj_fs.glsl");
-    shaderPostProcess = Shader::New("./shaders/screen_PP_vs.glsl", "./shaders/screen_PP_fs.glsl");
-    shaderSkybox = Shader::New("./shaders/skybox_vs.glsl", "./shaders/skybox_fs.glsl");
-    shaderShadow = Shader::New("./shaders/shadow_map_vs.glsl", "./shaders/shadow_map_fs.glsl");
-    shaderBlur = Shader::New("./shaders/blur_vs.glsl", "./shaders/blur_fs.glsl");
-    shaderGBuffer = Shader::New("./shaders/g_buffer_vs.glsl", "./shaders/g_buffer_fs.glsl");
-    shaderGLightPass = Shader::New("./shaders/g_light_pass_vs.glsl", "./shaders/default_obj_fs.glsl");
+    const auto SPath = [](const std::string p) -> const std::string {
+        constexpr static std::string SHADER_DIR = "./shaders/";
+        return SHADER_DIR + p;
+    };
+
+    shaderDefault = Shader::New(
+        SPath("light_cube_vs.glsl"),
+        SPath("light_cube_fs.glsl")
+    );
+    shaderPhong = Shader::New(
+        SPath("phong_vs.glsl"),
+        SPath("phong_fs.glsl")
+    );
+    shaderPostProcess = Shader::New(
+        SPath("screen_PP_vs.glsl"),
+        SPath("screen_PP_fs.glsl")
+    );
+    shaderSkybox = Shader::New(
+        SPath("skybox_vs.glsl"),
+        SPath("skybox_fs.glsl")
+    );
+    shaderShadow = Shader::New(
+        SPath("shadow_map_vs.glsl"),
+        SPath("shadow_map_fs.glsl")
+    );
+    shaderBlur = Shader::New(
+        SPath("blur_vs.glsl"),
+        SPath("blur_fs.glsl")
+    );
+    shaderGBuffer = Shader::New(
+        SPath("g_buffer_vs.glsl"),
+        SPath("g_buffer_fs.glsl")
+    );
+    shaderGLightPass = Shader::New(
+        SPath("g_light_pass_vs.glsl"),
+        SPath("phong_fs.glsl")
+    );
 
     Scene::Ptr scene = Scene::New();
 
