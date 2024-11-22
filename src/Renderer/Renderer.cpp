@@ -21,6 +21,7 @@
 
 #include "Texture/ColorBufferTexture.hpp"
 #include "Texture/DepthBufferTexture.hpp"
+#include "Texture/MonoBufferTexture.hpp"
 #include "Texture/Texture.hpp"
 #include "Texture/MultisampleTexture.hpp"
 #include "Lighting/PointLight.hpp"
@@ -35,6 +36,7 @@
 
 #include <memory>
 #include <ostream>
+#include <random>
 #include <stb_image.h>
 
 namespace renderer {
@@ -69,6 +71,8 @@ FrameBuffer::Ptr fboOffscrMSAA;
 FrameBuffer::Ptr fboOffscr;
 FrameBuffer::Ptr fboBlurHoriz;
 FrameBuffer::Ptr fboBlurVert;
+FrameBuffer::Ptr fboSSAO;
+FrameBuffer::Ptr fboSSAOBlur;
 
 GBuffer::Ptr fboGBuffer;
 
@@ -81,7 +85,9 @@ ColorBufferTexture::Ptr texOffscrBright;
 MultisampleTexture::Ptr texOffscrMSAA;
 ColorBufferTexture::Ptr texBlurHoriz;
 ColorBufferTexture::Ptr texBlurVert;
-
+MonoBufferTexture::Ptr texSSAO;
+MonoBufferTexture::Ptr texSSAOBlur;
+Texture::Ptr texSSAONoise;
 
 Quad::Ptr screenQuad;
 Cube::Ptr pointLightsCube;
@@ -621,6 +627,61 @@ void setupGeometryPass() {
     fboGBuffer = GBuffer::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 }
 
+void setupSSAOPass() {
+    fboSSAO = FrameBuffer::New();
+    texSSAO = MonoBufferTexture::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+
+    fboSSAO->attachTexture(GL_COLOR_ATTACHMENT0, texSSAO);
+    fboSSAO->bind();
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "SSAO Framebuffer not complete!" << std::endl;
+
+    fboSSAOBlur = FrameBuffer::New();
+    texSSAOBlur = MonoBufferTexture::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
+
+    fboSSAOBlur->attachTexture(GL_COLOR_ATTACHMENT0, texSSAOBlur);
+    fboSSAOBlur->bind();
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "SSAO Blur Framebuffer not complete!" << std::endl;
+
+    std::uniform_real_distribution<GLfloat> randomFloats(0.0, 1.0); // generates random floats between 0.0 and 1.0
+    std::default_random_engine generator;
+    std::vector<glm::vec3> ssaoKernel;
+    for (unsigned int i = 0; i < 64; ++i)
+    {
+        glm::vec3 sample(randomFloats(generator) * 2.0 - 1.0, randomFloats(generator) * 2.0 - 1.0, randomFloats(generator));
+        sample = glm::normalize(sample);
+        sample *= randomFloats(generator);
+        float scale = float(i) / 64.0f;
+
+        // scale samples s.t. they're more aligned to center of kernel
+        scale = .1f + (scale * scale) * .9f;
+        sample *= scale;
+        ssaoKernel.push_back(sample);
+    }
+
+    std::vector<glm::vec3> ssaoNoise;
+    for (unsigned int i = 0; i < 16; i++)
+    {
+        glm::vec3 noise(randomFloats(generator) * 2.0 - 1.0, randomFloats(generator) * 2.0 - 1.0, 0.0f); // rotate around z-axis (in tangent space)
+        ssaoNoise.push_back(noise);
+    }
+
+    TextureConfig tconf;
+    tconf.min_filter = tconf.mag_filter = GL_NEAREST;
+    tconf.wrap_s = tconf.wrap_t = GL_REPEAT;
+    tconf.internal_format = GL_RGBA32F;
+    tconf.data_format = GL_RGB;
+    tconf.data_type = GL_FLOAT;
+
+    texSSAONoise = Texture::New(
+        &ssaoNoise[0],
+        4, 4,
+        TextureType::None,
+        tconf
+    );
+}
+
 void render() {
 
     using namespace window;
@@ -640,6 +701,7 @@ void render() {
     g_Proj = glm::perspective(camera::g_Camera.Fov(),
                               ASPECT_RATIO, g_Engine.NEAR_PLANE, g_Engine.FAR_PLANE);
 
+    // TODO: SSAO Pass
     shadowPass();
     if (g_Engine.DEFERRED_SHADING) geometryPass();
     backBufferPass();
@@ -857,6 +919,7 @@ int init() {
     setupOffscrPass();
     setupGeometryPass();
     setupBloomPass();
+    setupSSAOPass();
     setupPostprocessPass();
 
     return 0;

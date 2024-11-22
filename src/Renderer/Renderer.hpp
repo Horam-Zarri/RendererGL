@@ -11,6 +11,7 @@
 #include "Lighting/Light.hpp"
 #include "Lighting/DirectionalLight.hpp"
 #include "Camera.hpp"
+#include "Texture/MonoBufferTexture.hpp"
 #include "Texture/MultisampleTexture.hpp"
 #include "Texture/ColorBufferTexture.hpp"
 #include "Texture/DepthBufferTexture.hpp"
@@ -165,6 +166,8 @@ extern FrameBuffer::Ptr fboOffscrMSAA;
 extern FrameBuffer::Ptr fboOffscr;
 extern FrameBuffer::Ptr fboBlurHoriz;
 extern FrameBuffer::Ptr fboBlurVert;
+extern FrameBuffer::Ptr fboSSAO;
+extern FrameBuffer::Ptr fboSSAOBlur;
 
 extern GBuffer::Ptr fboGBuffer;
 
@@ -177,6 +180,9 @@ extern ColorBufferTexture::Ptr texOffscrBright;
 extern MultisampleTexture::Ptr texOffscrMSAA;
 extern ColorBufferTexture::Ptr texBlurHoriz;
 extern ColorBufferTexture::Ptr texBlurVert;
+extern MonoBufferTexture::Ptr texSSAO;
+extern MonoBufferTexture::Ptr texSSAOBlur;
+extern Texture::Ptr texSSAONoise;
 
 extern Quad::Ptr screenQuad;
 extern Cube::Ptr pointLightsCube;

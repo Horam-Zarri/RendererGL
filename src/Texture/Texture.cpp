@@ -39,16 +39,52 @@ Texture::Texture(TextureType ttype, TextureConfig tconf):
     std::cout << "TEX GENERATED FOR " << m_TextureID << std::endl;
 }
 
-Texture::Texture(const std::string& path, TextureType type, TextureConfig tex_conf)
-: m_Path{path}, m_Type{type}, m_Config{tex_conf}
+Texture::Texture(
+    const void* pixels,
+    unsigned int width,
+    unsigned int height,
+    TextureType type,
+    TextureConfig tconf
+) :
+    m_Pixels{pixels}, m_Path{}, m_Type{type}, m_Config{tconf}
+{
+    m_Width = width;
+    m_Height = height;
+
+    glGenTextures(1, &m_TextureID);
+    genTexture();
+}
+
+Texture::Texture(const std::string& path, TextureType type, TextureConfig tconf)
+: m_Path{path}, m_Type{type}, m_Config{tconf}
 {
     glGenTextures(1, &m_TextureID);
     genTexture();
 }
 
 void Texture::genTexture() {
-    // TODO: Add genFromBuffer();
-    genFromFile();
+    if (!m_Path.empty())
+        genFromFile();
+    else
+        genFromPixels();
+}
+
+void Texture::genFromPixels() {
+    bind();
+
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0, m_Config.internal_format,
+        m_Width, m_Height,
+        0, m_Config.data_format,
+        m_Config.data_type,
+        m_Pixels
+    );
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_Config.min_filter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,  m_Config.mag_filter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, m_Config.wrap_s);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, m_Config.wrap_t);
 }
 
 void Texture::genFromFile() {

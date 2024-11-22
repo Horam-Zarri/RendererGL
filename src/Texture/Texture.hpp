@@ -21,6 +21,8 @@ struct TextureConfig {
     int wrap_s;
     int wrap_r;
 
+    int data_type;
+
     int msaa_multiplier;
 
     bool gamma_correction;
@@ -38,6 +40,8 @@ struct TextureConfig {
         min_filter = GL_LINEAR_MIPMAP_LINEAR;
 
         wrap_t = wrap_s = wrap_r = GL_REPEAT;
+
+        data_type = GL_UNSIGNED_BYTE;
 
         msaa_multiplier = 4;
 
@@ -61,6 +65,8 @@ class Texture {
     MAKE_MOVE_ONLY(Texture)
     GENERATE_PTR(Texture)
 
+private:
+    const void* m_Pixels;
 protected:
     unsigned int m_Width, m_Height;
     unsigned int m_Slot;
@@ -80,12 +86,21 @@ public:
     std::string m_Path;
 
     Texture(
+        const void* pixels,
+        unsigned int width,
+        unsigned int height,
+        TextureType type = TextureType::None,
+        TextureConfig tconf = TextureConfig()
+    );
+
+    Texture(
         const std::string& path,
         TextureType type = TextureType::Diffuse,
-        TextureConfig tex_conf = TextureConfig()
+        TextureConfig tconf = TextureConfig()
     );
 
     void genFromFile();
+    void genFromPixels();
 
     virtual void bind() const;
     virtual void unbind() const;
