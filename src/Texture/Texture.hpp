@@ -59,6 +59,7 @@ enum class TextureType {
     CubeMap,
     ColorAttach, ColorAttachMultisample,
     DepthAttach,
+    Albedo, Roughness, Ao, Metallic
 };
 
 class Texture {
@@ -75,7 +76,7 @@ protected:
     TextureType m_Type;
     TextureConfig m_Config;
 
-    static GLenum getInternalFormat(int nrComponents, bool gamma_correction);
+    static GLenum getInternalFormat(int nrComponents, bool srgb);
     static GLenum getDataFormat(int nrComponents);
 
     Texture(TextureType ttype, TextureConfig tconf);

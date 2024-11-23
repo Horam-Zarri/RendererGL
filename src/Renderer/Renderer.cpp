@@ -17,6 +17,7 @@
 #include "Core/Shapes/Plane.hpp"
 #include "Core/Shapes/Quad.hpp"
 
+#include "Core/Shapes/Sphere.hpp"
 #include "Model/Model.hpp"
 
 #include "Texture/ColorBufferTexture.hpp"
@@ -879,11 +880,16 @@ int init() {
     //    pl->setColor(lightColors[i]);
     //}
 
+    MeshGroup::Ptr test_pbr = MeshGroup::New();
+    Sphere::Ptr sphere = Sphere::New(64, 64);
+    test_pbr->addMesh(sphere);
+
     //scene->addGroup(test_bloom);
     //scene->addGroup(test_normal);
-    scene->addGroup(model1);
+    //scene->addGroup(model1);
     //scene->addGroup(test_shadow);
     //scene->addGroup(model2);
+    scene->addGroup(test_pbr);
 
     g_Scenes.push_back(scene);
 

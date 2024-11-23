@@ -7,12 +7,12 @@
 #include "Renderer/Renderer.hpp"
 
 
-GLenum Texture::getInternalFormat(int nrComponents, bool gamma_correction) {
+GLenum Texture::getInternalFormat(int nrComponents, bool srgb) {
     switch (nrComponents) {
         case 1: return GL_RED;
         case 2: return GL_RG;
-        case 3: return gamma_correction ? GL_SRGB : GL_RGB;
-        case 4: return gamma_correction ? GL_SRGB_ALPHA : GL_RGBA;
+        case 3: return srgb ? GL_SRGB : GL_RGB;
+        case 4: return srgb ? GL_SRGB_ALPHA : GL_RGBA;
     }
 
     std::cerr << "TEXTRE:: Unknown component count: " << nrComponents << std::endl;
@@ -99,7 +99,8 @@ void Texture::genFromFile() {
 
         // sentinel value for unspecified
         if (data_format == -1) {
-            internal_format = getInternalFormat(nrComponents, m_Config.gamma_correction);
+            bool srgb = m_Config.gamma_correction;
+            internal_format = getInternalFormat(nrComponents, srgb);
             data_format = getDataFormat(nrComponents);
         }
 

@@ -24,6 +24,16 @@ Mesh::Mesh(
 
 
 Mesh::Mesh(
+    std::vector<Vertex>&& vertices,
+    std::vector<unsigned int>&& indices
+) :
+    m_ModelMatrix(1.f),
+    m_VerticesLength(vertices.size()), m_IndicesLength(indices.size())
+{
+    init(vertices, indices);
+}
+
+Mesh::Mesh(
     std::vector<Vertex>& vertices,
     std::vector<unsigned int>& indices,
     std::vector<Texture::Ptr>& textures
@@ -57,7 +67,7 @@ void Mesh::init(
 
 }
 
-void Mesh::draw(bool wireframe) {
+void Mesh::draw(bool wireframe, GLenum primitive) {
     m_VAO->bind();
 
     wireframe
@@ -67,8 +77,8 @@ void Mesh::draw(bool wireframe) {
     // TODO: 1 - Allow drawing more primitives
     //       2 - Add wireframe mode
     if (m_IBO == nullptr)
-        glDrawArrays(GL_TRIANGLES, 0, m_VerticesLength * 3);
+        glDrawArrays(primitive, 0, m_VerticesLength * 3);
     else
-        glDrawElements(GL_TRIANGLES, m_IndicesLength, GL_UNSIGNED_INT, 0);
+        glDrawElements(primitive, m_IndicesLength, GL_UNSIGNED_INT, 0);
 
 }

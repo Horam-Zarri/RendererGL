@@ -42,8 +42,10 @@ private:
 
 public:
 
+    // TODO: make these cleaner
     Mesh(std::vector<Vertex>& vertices);
     Mesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices);
+    Mesh(std::vector<Vertex>&& vertices, std::vector<unsigned int>&& indices);
     Mesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, std::vector<Texture::Ptr>& textures);
 
     inline void translate(const glm::vec3& v) { m_ModelMatrix = glm::translate(m_ModelMatrix, v); }
@@ -60,7 +62,7 @@ public:
     inline void setModelMatrix(const glm::mat4& modelMatrix) { m_ModelMatrix = modelMatrix; }
     inline glm::mat4& getModelMatrix() { return m_ModelMatrix; }
 
-    void draw(bool wireframe = false);
+    virtual void draw(bool wireframe = false, GLenum primitive = GL_TRIANGLES);
 };
 
 #endif
