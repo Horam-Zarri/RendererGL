@@ -101,8 +101,10 @@ void main()
     if (bloom)
         color += texture(bloomTexture, TexCoords).rgb;
 
-    if (hdr)
+    if (hdr) {
+        //color = color / (color + vec3(1.0));
         color = vec3(1.0) - exp(-color * exposure);
+    }
 
     if (gamma)
         color = pow(color, vec3(1.0/2.2));

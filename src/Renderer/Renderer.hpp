@@ -60,8 +60,8 @@ struct EngineState {
     float HDR_EXPOSURE;
 
     int BLOOM_ENBL;
-
     int DEFERRED_SHADING;
+    int PBR_ENBL;
 
     EngineState() {
         LIGHT_DIR = glm::vec3(-4.0f, -2.0f, -3.0f);
@@ -107,9 +107,11 @@ struct EngineState {
         HDR_ENBL = true;
         HDR_EXPOSURE = 1.f;
 
-        BLOOM_ENBL = true;
+        BLOOM_ENBL = false;
 
-        DEFERRED_SHADING = true;
+        DEFERRED_SHADING = false;
+
+        PBR_ENBL = true;
     }
 };
 
@@ -125,6 +127,13 @@ constexpr static unsigned int TEXTURE_SLOT_DEFERRED_ALBEDOSPEC = 7;
 constexpr static unsigned int TEXTURE_SLOT_DEFERRED_POSITION_LIGHT_SPACE = 8;
 
 constexpr static unsigned int TEXTURE_SLOT_UNBOUND = 15;
+
+// Texture slots for shaderPbr
+constexpr static unsigned int TEXTURE_SLOT_ALBEDO = 0;
+constexpr static unsigned int TEXTURE_SLOT_NORMAL_PBR = 1;
+constexpr static unsigned int TEXTURE_SLOT_METALLIC = 2;
+constexpr static unsigned int TEXTURE_SLOT_ROUGHNESS = 3;
+constexpr static unsigned int TEXTURE_SLOT_AO = 4;
 
 // Texture slots for shaderPostProcess
 constexpr static unsigned int TEXTURE_SLOT_SCREEN = 0;
@@ -152,6 +161,7 @@ extern Shader::Ptr shaderShadow;
 extern Shader::Ptr shaderBlur;
 extern Shader::Ptr shaderGBuffer;
 extern Shader::Ptr shaderGLightPass;
+extern Shader::Ptr shaderPbr;
 
 extern std::vector<Scene::Ptr> g_Scenes;
 extern DirectionalLight::Ptr g_SunLight;
@@ -206,6 +216,7 @@ void terminate();
 size_t getLightsCount(LightType lt);
 void addSpotLight();
 void addPointLight();
+void addPointLight(glm::vec3 position, glm::vec3 color = glm::vec3(1.f));
 void removeLight(int index);
 const Light::Ptr getLight(int index);
 

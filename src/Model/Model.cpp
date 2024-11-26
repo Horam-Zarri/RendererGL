@@ -112,6 +112,12 @@ Mesh::Ptr Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     {
         aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
 
+        int shadingModel = 0;
+        aiGetMaterialInteger(material, AI_MATKEY_SHADING_MODEL, &shadingModel);
+
+        if (shadingModel == aiShadingMode_PBR_BRDF) {
+            // TODO: Handle PBR textures
+        }
         std::vector<Texture::Ptr> diffuseMaps = loadMaterialTextures(
             material, aiTextureType_DIFFUSE);
         textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());

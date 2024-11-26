@@ -62,6 +62,7 @@ Skybox::Skybox(std::array<std::string, 6> faces)
 
     std::cout << "NOW SKYMAP" << std::endl;
     m_Skymap = CubeMapTexture::New(faces, sk_conf);
+    std::cout << "SE POP IN" << std::endl;
     m_Skymap->setSlot(0);
 
     m_VBO = VertexBuffer::New();

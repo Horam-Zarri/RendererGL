@@ -46,6 +46,7 @@ void CubeMapTexture::genTexture() {
             stbi_image_free(data);
         }
     }
+    std::cout << "WAU" << std::endl;
 }
 
 void CubeMapTexture::bind() const {

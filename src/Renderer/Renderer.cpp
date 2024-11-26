@@ -18,6 +18,7 @@
 #include "Core/Shapes/Quad.hpp"
 
 #include "Core/Shapes/Sphere.hpp"
+#include "Lighting/PBRMaterial.hpp"
 #include "Model/Model.hpp"
 
 #include "Texture/ColorBufferTexture.hpp"
@@ -58,6 +59,7 @@ Shader::Ptr shaderShadow;
 Shader::Ptr shaderBlur;
 Shader::Ptr shaderGBuffer;
 Shader::Ptr shaderGLightPass;
+Shader::Ptr shaderPbr;
 
 std::vector<Scene::Ptr> g_Scenes;
 DirectionalLight::Ptr g_SunLight;
@@ -160,6 +162,26 @@ void sendLightUniforms(const Shader::Ptr& shader) {
     shader->setVec3("directionalLight.ambient", g_SunLight->getAmbient());
     shader->setVec3("directionalLight.diffuse", g_SunLight->getDiffuse());
     shader->setVec3("directionalLight.specular", g_SunLight->getSpecular());
+}
+
+void sendLightPbrUniforms(const Shader::Ptr& shader) {
+    shader->use();
+
+    shader->setInt("pointLightsSize", getLightsCount(LightType::PointLight));
+
+    unsigned int pointLightIndex = 0;
+
+    for (const Light::Ptr& light : g_Lights) {
+        LightType light_type = light->getType();
+
+        if (light_type == LightType::PointLight) {
+            PointLight::Ptr pl = std::dynamic_pointer_cast<PointLight, Light>(light);
+            std::string base = "pointLights[" + std::to_string(pointLightIndex) + "]";
+            shader->setVec3(base + ".position", pl->getPosition());
+            shader->setVec3(base + ".color", pl->getAveragedColor());
+            pointLightIndex++;
+        }
+    }
 }
 
 void renderLightCubes(const Shader::Ptr& shader) {
@@ -265,6 +287,13 @@ void renderScenes(const Shader::Ptr& shader) {
                         shader->setVec3("material.specular", phong_mat->getSpecular());
                         shader->setFloat("material.shininess", phong_mat->getShininess());
                     }
+                    else if (mat_type == MaterialType::PBR) {
+                        PBRMaterial::Ptr pbr_mat = std::dynamic_pointer_cast<PBRMaterial>(material);
+                        shader->setVec3("material.albedo", pbr_mat->getAlbedo());
+                        shader->setFloat("material.metallic", pbr_mat->getMetallic());
+                        shader->setFloat("material.roughness", pbr_mat->getRoughness());
+                        shader->setFloat("material.ao", pbr_mat->getAo());
+                    }
                 }
 
                 mesh->draw();
@@ -306,6 +335,19 @@ void sendOffscrUniforms(const Shader::Ptr& shader) {
     shader->setInt("materialMaps.specular", TEXTURE_SLOT_SPECULAR);
     shader->setInt("materialMaps.shadow", TEXTURE_SLOT_SHADOW);
     shader->setInt("materialMaps.normal", TEXTURE_SLOT_NORMAL);
+}
+
+void sendOffscrPbrUniforms(const Shader::Ptr& shader) {
+    shader->setBool("deferred", false);
+    shader->setMat4("view", g_View);
+    shader->setMat4("projection", g_Proj);
+    shader->setVec3("camPos", camera::g_Camera.Position);
+
+    shader->setInt("materialMaps.albedoMap", TEXTURE_SLOT_ALBEDO);
+    shader->setInt("materialMaps.normal", TEXTURE_SLOT_NORMAL_PBR);
+    shader->setInt("materialMaps.roughness", TEXTURE_SLOT_ROUGHNESS);
+    shader->setInt("materialMaps.metallic", TEXTURE_SLOT_METALLIC);
+    shader->setInt("materialMaps.ao", TEXTURE_SLOT_AO);
 }
 
 void sendLightPassUniforms(const Shader::Ptr& shader) {
@@ -361,10 +403,17 @@ void backBufferPass() {
 
         fboGBuffer->blitDepthTo(fboOffscr, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
     } else {
-        shaderPhong->use();
-        sendOffscrUniforms(shaderPhong);
-        sendLightUniforms(shaderPhong);
-        renderScenes(shaderPhong);
+        if (g_Engine.PBR_ENBL) {
+            shaderPbr->use();
+            sendOffscrPbrUniforms(shaderPbr);
+            sendLightPbrUniforms(shaderPbr);
+            renderScenes(shaderPbr);
+        } else {
+            shaderPhong->use();
+            sendOffscrUniforms(shaderPhong);
+            sendLightUniforms(shaderPhong);
+            renderScenes(shaderPhong);
+        }
     }
 
     // Draw skybox
@@ -376,7 +425,7 @@ void backBufferPass() {
     shaderSkybox->setMat4("view", glm::mat4(glm::mat3(g_View)));
     shaderSkybox->setMat4("projection", g_Proj);
 
-    skybox->draw();
+    //skybox->draw();
 
     glColorMaski(1, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
@@ -755,6 +804,10 @@ int init() {
         SPath("g_light_pass_vs.glsl"),
         SPath("phong_fs.glsl")
     );
+    shaderPbr = Shader::New(
+        SPath("pbr_vs.glsl"),
+        SPath("pbr_fs.glsl")
+    );
 
     Scene::Ptr scene = Scene::New();
 
@@ -881,9 +934,52 @@ int init() {
     //}
 
     MeshGroup::Ptr test_pbr = MeshGroup::New();
-    Sphere::Ptr sphere = Sphere::New(64, 64);
-    test_pbr->addMesh(sphere);
 
+    glm::vec3 _albedo(0.5f, 0.0f, 0.0f);
+    float _ao = 1.f;
+
+    float spacing = 2.5f;
+    for (int row = 0; row < 7; ++row)
+    {
+        float metallic = (float)row / 7;
+        for (int col = 0; col < 7; ++col)
+        {
+            // we clamp the roughness to 0.05 - 1.0 as perfectly smooth surfaces (roughness of 0.0) tend to look a bit off
+            // on direct lighting.
+            float roughness = glm::clamp((float)col / (float)7, 0.1f, 1.0f);
+
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(
+                (col - (7.f / 2)) * spacing,
+                (row - (7.f / 2)) * spacing,
+                0.0f
+            ));
+            Sphere::Ptr sphere = Sphere::New(64, 64);
+            sphere->setModelMatrix(model);
+            Material::Ptr mtl = PBRMaterial::New(_albedo, roughness, metallic, _ao);
+            sphere->setMaterial(mtl);
+            test_pbr->addMesh(sphere);
+        }
+    }
+    // pbr test lights
+    // ------
+    glm::vec3 lightPos[] = {
+        glm::vec3(-10.0f,  10.0f, 10.0f),
+        glm::vec3( 10.0f,  10.0f, 10.0f),
+        glm::vec3(-10.0f, -10.0f, 10.0f),
+        glm::vec3( 10.0f, -10.0f, 10.0f),
+    };
+    glm::vec3 lightColor[] = {
+        glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f)
+    };
+
+    for (unsigned int i = 0; i < 4; i++)
+    {
+        addPointLight(lightPos[i], lightColor[i]);
+    }
     //scene->addGroup(test_bloom);
     //scene->addGroup(test_normal);
     //scene->addGroup(model1);
@@ -921,7 +1017,9 @@ int init() {
 
     skybox = Skybox::New(faces);
 
+    std::cout << "BEFORE SHADOW SETUP" << std::endl;
     setupShadowPass();
+    std::cout << "AFTER SHADOW SETUP" << std::endl;
     setupOffscrPass();
     setupGeometryPass();
     setupBloomPass();
@@ -1082,6 +1180,12 @@ void addPointLight() {
 
     if (g_Lights.size() < renderer::NR_MAX_LIGHTS)
         g_Lights.push_back(PointLight::New(initial_pos, initial_distance, initial_color));
+}
+
+void addPointLight(glm::vec3 position, glm::vec3 color) {
+    constexpr unsigned int initial_distance = 13;
+    if (g_Lights.size() < renderer::NR_MAX_LIGHTS)
+        g_Lights.push_back(PointLight::New(position, initial_distance, color));
 }
 
 size_t getLightsCount(LightType lt) {

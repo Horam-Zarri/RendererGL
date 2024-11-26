@@ -9,7 +9,7 @@
 #include <variant>
 
 enum class MaterialType {
-    None, Solid, Phong
+    None, Solid, Phong, PBR
 };
 
 class Material {
