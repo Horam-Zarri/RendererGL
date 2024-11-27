@@ -23,8 +23,13 @@ struct MaterialTexture {
     sampler2D aoMap;
 };
 
-uniform bool gammaCorrect;
-uniform bool hasTextureMaps;
+uniform bool gammaCorrect=true;
+
+uniform bool hasAlbedo;
+uniform bool hasMetallic;
+uniform bool hasRoughness;
+uniform bool hasAo;
+uniform bool hasNormal;
 
 #define NR_MAX_LIGHTS 10
 
@@ -110,24 +115,18 @@ void main()
     vec3 _Albedo, _Normal;
     float _Metallic, _Roughness, _Ao;
 
-    if (hasTextureMaps)
-    {
-        _Albedo = texture(materialMaps.albedoMap, fs_in.TexCoords).rgb;
-        _Normal = getNormalFromMap(materialMaps.normalMap);
-        _Metallic = texture(materialMaps.metallicMap, fs_in.TexCoords).r;
-        _Roughness = texture(materialMaps.roughnessMap, fs_in.TexCoords).r;
-        _Ao = texture(materialMaps.aoMap, fs_in.TexCoords).r;
-    }
-    else
-    {
-        _Albedo = material.albedo;
-        _Normal = fs_in.Normal;
-        _Metallic = material.metallic;
-        _Roughness = material.roughness;
-        _Ao = material.ao;
-    }
+    _Albedo = hasAlbedo ? texture(materialMaps.albedoMap, fs_in.TexCoords).rgb
+        : material.albedo;
+    _Normal = hasNormal ? getNormalFromMap(materialMaps.normalMap)
+        : fs_in.Normal;
+    _Metallic = hasMetallic ? texture(materialMaps.metallicMap, fs_in.TexCoords).r
+        : material.metallic;
+    _Roughness = hasRoughness ? texture(materialMaps.roughnessMap, fs_in.TexCoords).r
+        : material.roughness;
+    _Ao = hasAo ? texture(materialMaps.aoMap, fs_in.TexCoords).r
+        : material.ao;
 
-    if (gammaCorrect && hasTextureMaps) _Albedo = pow(_Albedo, vec3(2.2));
+    if (gammaCorrect && hasAlbedo) _Albedo = pow(_Albedo, vec3(2.2));
 
     vec3 N = normalize(_Normal);
     vec3 V = normalize(camPos - fs_in.WorldPos);

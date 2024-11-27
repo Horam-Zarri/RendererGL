@@ -130,9 +130,9 @@ constexpr static unsigned int TEXTURE_SLOT_UNBOUND = 15;
 
 // Texture slots for shaderPbr
 constexpr static unsigned int TEXTURE_SLOT_ALBEDO = 0;
-constexpr static unsigned int TEXTURE_SLOT_NORMAL_PBR = 1;
-constexpr static unsigned int TEXTURE_SLOT_METALLIC = 2;
-constexpr static unsigned int TEXTURE_SLOT_ROUGHNESS = 3;
+constexpr static unsigned int TEXTURE_SLOT_METALLIC = 1;
+constexpr static unsigned int TEXTURE_SLOT_ROUGHNESS = 2;
+constexpr static unsigned int TEXTURE_SLOT_NORMAL_PBR = TEXTURE_SLOT_NORMAL;
 constexpr static unsigned int TEXTURE_SLOT_AO = 4;
 
 // Texture slots for shaderPostProcess

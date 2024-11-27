@@ -241,6 +241,10 @@ void renderScenes(const Shader::Ptr& shader) {
                 shader->setMat4("model", model);
 
                 bool hasDiffuse = false, hasSpecular = false, hasNormal = false;
+                bool hasAlbedo = false, hasMetallic = false,
+                     hasRoughness = false, hasAo = false;
+
+                bool pbr = false;
 
                 for (const auto& texture : mesh->getTextures()) {
 
@@ -259,6 +263,26 @@ void renderScenes(const Shader::Ptr& shader) {
                             slot = TEXTURE_SLOT_NORMAL;
                             hasNormal = true;
                             break;
+                        case TextureType::Albedo:
+                            slot = TEXTURE_SLOT_ALBEDO;
+                            hasAlbedo = true;
+                            pbr = true;
+                            break;
+                        case TextureType::Metallic:
+                            slot = TEXTURE_SLOT_METALLIC;
+                            hasMetallic = true;
+                            pbr = true;
+                            break;
+                        case TextureType::Roughness:
+                            slot = TEXTURE_SLOT_ROUGHNESS;
+                            hasRoughness = true;
+                            pbr = true;
+                            break;
+                        case TextureType::Ao:
+                            slot = TEXTURE_SLOT_AO;
+                            hasAo = true;
+                            pbr = true;
+                            break;
                         default:
                             break;
                     }
@@ -267,10 +291,16 @@ void renderScenes(const Shader::Ptr& shader) {
                     texture->bind();
                 }
 
-
-                shader->setBool("hasDiffuse", hasDiffuse);
-                shader->setBool("hasSpecular", hasSpecular);
-                shader->setBool("hasNormal", hasNormal);
+                if (pbr) {
+                    shader->setBool("hasAlbedo", hasAlbedo);
+                    shader->setBool("hasMetallic", hasMetallic);
+                    shader->setBool("hasRoughness", hasRoughness);
+                    shader->setBool("hasAo", hasAo);
+                } else {
+                    shader->setBool("hasDiffuse", hasDiffuse);
+                    shader->setBool("hasSpecular", hasSpecular);
+                    shader->setBool("hasNormal", hasNormal);
+                }
 
                 const auto& material = mesh->getMaterial();
 
@@ -343,11 +373,13 @@ void sendOffscrPbrUniforms(const Shader::Ptr& shader) {
     shader->setMat4("projection", g_Proj);
     shader->setVec3("camPos", camera::g_Camera.Position);
 
+    shader->setBool("gammaCorrect", true);
+
     shader->setInt("materialMaps.albedoMap", TEXTURE_SLOT_ALBEDO);
-    shader->setInt("materialMaps.normal", TEXTURE_SLOT_NORMAL_PBR);
-    shader->setInt("materialMaps.roughness", TEXTURE_SLOT_ROUGHNESS);
-    shader->setInt("materialMaps.metallic", TEXTURE_SLOT_METALLIC);
-    shader->setInt("materialMaps.ao", TEXTURE_SLOT_AO);
+    shader->setInt("materialMaps.normalMap", TEXTURE_SLOT_NORMAL_PBR);
+    shader->setInt("materialMaps.roughnessMap", TEXTURE_SLOT_ROUGHNESS);
+    shader->setInt("materialMaps.metallicMap", TEXTURE_SLOT_METALLIC);
+    shader->setInt("materialMaps.aoMap", TEXTURE_SLOT_AO);
 }
 
 void sendLightPassUniforms(const Shader::Ptr& shader) {
@@ -935,6 +967,11 @@ int init() {
 
     MeshGroup::Ptr test_pbr = MeshGroup::New();
 
+    Texture::Ptr txpa = Texture::New("./assets/rst/basecolor.png", TextureType::Albedo);
+    Texture::Ptr txpm = Texture::New("./assets/rst/metallic.png", TextureType::Metallic);
+    Texture::Ptr txpr = Texture::New("./assets/rst/roughness.png", TextureType::Roughness);
+    Texture::Ptr txpn = Texture::New("./assets/rst/normal.png", TextureType::Normal);
+
     glm::vec3 _albedo(0.5f, 0.0f, 0.0f);
     float _ao = 1.f;
 
@@ -956,6 +993,11 @@ int init() {
             ));
             Sphere::Ptr sphere = Sphere::New(64, 64);
             sphere->setModelMatrix(model);
+
+            sphere->addTexture(txpa);
+            sphere->addTexture(txpm);
+            sphere->addTexture(txpr);
+
             Material::Ptr mtl = PBRMaterial::New(_albedo, roughness, metallic, _ao);
             sphere->setMaterial(mtl);
             test_pbr->addMesh(sphere);
@@ -970,10 +1012,10 @@ int init() {
         glm::vec3( 10.0f, -10.0f, 10.0f),
     };
     glm::vec3 lightColor[] = {
-        glm::vec3(1.0f, 1.0f, 1.0f),
-        glm::vec3(1.0f, 1.0f, 1.0f),
-        glm::vec3(1.0f, 1.0f, 1.0f),
-        glm::vec3(1.0f, 1.0f, 1.0f)
+        glm::vec3(1.f, 1.f, 1.f),
+        glm::vec3(1.f, 1.f, 1.f),
+        glm::vec3(1.f, 1.f, 1.f),
+        glm::vec3(1.f, 1.f, 1.f)
     };
 
     for (unsigned int i = 0; i < 4; i++)
