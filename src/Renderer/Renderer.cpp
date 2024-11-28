@@ -182,6 +182,9 @@ void sendLightPbrUniforms(const Shader::Ptr& shader) {
             pointLightIndex++;
         }
     }
+
+    shader->setVec3("directionalLight.direction", g_SunLight->getDirection());
+    shader->setVec3("directionalLight.color", g_SunLight->getAveragedColor() / 1.5f);
 }
 
 void renderLightCubes(const Shader::Ptr& shader) {
@@ -483,7 +486,8 @@ void setupOffscrPass() {
         texOffscr_TConf = texOffscr->getTextureConfig(),
         texOffscrBright_TConf = texOffscrBright->getTextureConfig();
 
-    texOffscr_TConf.hdr = texOffscrBright_TConf.hdr = g_Engine.HDR_ENBL;
+    texOffscr_TConf.hdr = texOffscrBright_TConf.hdr
+        = g_Engine.HDR_ENBL;
 
     texOffscr->setTextureConfig(texOffscr_TConf);
     texOffscrBright->setTextureConfig(texOffscrBright_TConf);
@@ -843,7 +847,8 @@ int init() {
 
     Scene::Ptr scene = Scene::New();
 
-    Model::Ptr model1 = Model::New("./assets/Sponza/glTF/Sponza.gltf");
+    //Model::Ptr model1 = Model::New("./assets/Sponza/glTF/Sponza.gltf");
+    Model::Ptr model1 = Model::New("./assets/SponzaR/sponza.glb", true);
     model1->scale(glm::vec3(0.01));
     Model::Ptr model2 = Model::New("./assets/backpack.obj");
 
@@ -1024,10 +1029,10 @@ int init() {
     }
     //scene->addGroup(test_bloom);
     //scene->addGroup(test_normal);
-    //scene->addGroup(model1);
+    scene->addGroup(model1);
     //scene->addGroup(test_shadow);
     //scene->addGroup(model2);
-    scene->addGroup(test_pbr);
+    //scene->addGroup(test_pbr);
 
     g_Scenes.push_back(scene);
 
@@ -1057,7 +1062,8 @@ int init() {
     for (int j = 0; j < 6; j++)
         std::cout << "FACE::" << j << "::" << faces[j] << std::endl;
 
-    skybox = Skybox::New(faces);
+    // TODO: Turn on skybox later
+    //skybox = Skybox::New(faces);
 
     std::cout << "BEFORE SHADOW SETUP" << std::endl;
     setupShadowPass();

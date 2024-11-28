@@ -38,12 +38,18 @@ struct PointLight {
     vec3 color;
 };
 
+struct DirectionalLight {
+    vec3 direction;
+    vec3 color;
+};
+
 uniform PointLight pointLights[NR_MAX_LIGHTS];
+uniform int pointLightsSize;
+uniform DirectionalLight directionalLight;
 
 uniform MaterialSolid material;
 uniform MaterialTexture materialMaps;
 
-uniform int pointLightsSize;
 
 uniform vec3 camPos;
 
@@ -110,6 +116,70 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
+vec3 CalcPointLightRadiance(
+    PointLight light,
+    vec3 N,
+    vec3 V,
+    vec3 F0,
+    vec3 albedo,
+    float roughness,
+    float metallic
+) {
+    vec3 L = normalize(light.position - fs_in.WorldPos);
+    vec3 H = normalize(L + V);
+
+    float distance = length(L);
+    float attenuation = 1.0 / (distance * distance);
+    vec3 radiance = light.color * attenuation;
+
+    float NDF = DistributionGGX(N, H, roughness);
+    float G   = GeometrySmith(N, V, L, roughness);
+    vec3 F    = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);
+
+    vec3 specular = (NDF * G * F) /
+        (4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001);
+
+    vec3 kS = F;
+    vec3 kD = vec3(1.0) - kS;
+
+    kD *= 1.0 - metallic;
+
+    float NdotL = max(dot(N, L), 0.0);
+
+    vec3 Lo = (kD * albedo / PI + specular) * radiance * NdotL;
+    return Lo;
+}
+
+vec3 CalcDirLightRadiance(
+    DirectionalLight light,
+    vec3 N,
+    vec3 V,
+    vec3 F0,
+    vec3 albedo,
+    float roughness,
+    float metallic
+) {
+    vec3 L = normalize(-light.direction - fs_in.WorldPos);
+    vec3 H = normalize(L + V);
+
+    float NDF = DistributionGGX(N, H, roughness);
+    float G   = GeometrySmith(N, V, L, roughness);
+    vec3 F    = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);
+
+    vec3 specular = (NDF * G * F) /
+        (4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001);
+
+    vec3 kS = F;
+    vec3 kD = vec3(1.0) - kS;
+
+    kD *= 1.0 - metallic;
+
+    float NdotL = max(dot(N, L), 0.0);
+
+    vec3 Lo = (kD * albedo / PI + specular) * light.color * NdotL;
+    return Lo;
+}
+
 void main()
 {
     vec3 _Albedo, _Normal;
@@ -126,7 +196,7 @@ void main()
     _Ao = hasAo ? texture(materialMaps.aoMap, fs_in.TexCoords).r
         : material.ao;
 
-    if (gammaCorrect && hasAlbedo) _Albedo = pow(_Albedo, vec3(2.2));
+    //if (gammaCorrect && hasAlbedo) _Albedo = pow(_Albedo, vec3(2.2));
 
     vec3 N = normalize(_Normal);
     vec3 V = normalize(camPos - fs_in.WorldPos);
@@ -136,33 +206,10 @@ void main()
 
     vec3 Lo = vec3(0.0);
 
+    //Lo += CalcDirLightRadiance(directionalLight, V, N, F0, _Albedo, _Roughness, _Metallic);
+
     for (int i = 0; i < pointLightsSize; i++)
-    {
-
-        vec3 L = normalize(pointLights[i].position - fs_in.WorldPos);
-        vec3 H = normalize(L + V);
-
-
-        float distance = length(L);
-        float attenuation = 1.0 / (distance * distance);
-        vec3 radiance = pointLights[i].color * attenuation;
-
-        float NDF = DistributionGGX(N, H, _Roughness);
-        float G   = GeometrySmith(N, V, L, _Roughness);
-        vec3 F    = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);
-
-        vec3 specular = (NDF * G * F) /
-            (4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001);
-
-        vec3 kS = F;
-        vec3 kD = vec3(1.0) - kS;
-
-        kD *= 1.0 - _Metallic;
-
-        float NdotL = max(dot(N, L), 0.0);
-
-        Lo += (kD * _Albedo / PI + specular) * radiance * NdotL;
-    }
+        Lo += CalcPointLightRadiance(pointLights[i], V, N, F0, _Albedo, _Roughness, _Metallic);
 
     vec3 ambient = vec3(0.03) * _Albedo * _Ao;
     vec3 color = ambient + Lo;
@@ -172,5 +219,5 @@ void main()
     // gamma correct
     // color = pow(color, vec3(1.0/2.2));
 
-    FragColor = vec4(color, 1.0);
+    FragColor = vec4(_Roughness, 0.0, 0.0, 1.0);
 }

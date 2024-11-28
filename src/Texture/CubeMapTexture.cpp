@@ -28,7 +28,8 @@ void CubeMapTexture::genTexture() {
             GLenum data_format = m_Config.data_format;
 
             if (data_format == -1) {
-                internal_format = getInternalFormat(nrComponents, m_Config.gamma_correction);
+                bool srgb = m_Config.hdr;
+                internal_format = getInternalFormat(nrComponents, srgb);
                 data_format = getDataFormat(nrComponents);
             }
 

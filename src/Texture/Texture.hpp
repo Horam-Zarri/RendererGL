@@ -25,7 +25,6 @@ struct TextureConfig {
 
     int msaa_multiplier;
 
-    bool gamma_correction;
     bool hdr;
 
     bool flip;
@@ -45,7 +44,6 @@ struct TextureConfig {
 
         msaa_multiplier = 4;
 
-        gamma_correction = true;
         hdr = true;
 
         flip = true;

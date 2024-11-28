@@ -99,7 +99,7 @@ void Texture::genFromFile() {
 
         // sentinel value for unspecified
         if (data_format == -1) {
-            bool srgb = m_Config.gamma_correction;
+            bool srgb = m_Config.hdr;
             internal_format = getInternalFormat(nrComponents, srgb);
             data_format = getDataFormat(nrComponents);
         }
@@ -132,38 +132,3 @@ void Texture::unbind() const {
     glActiveTexture(GL_TEXTURE_2D + m_Slot);
     glBindTexture(GL_TEXTURE_2D, m_TextureID);
 }
-//void Texture::genColorBuffer(unsigned int width, unsigned int height) {
-//    handle_dirty();
-//
-//    m_Type = TextureType::COLOR_ATTACH;
-//
-//    glBindTexture(GL_TEXTURE_2D, m_TextureID);
-//
-//    glTexImage2D(
-//        GL_TEXTURE_2D, 0, GL_RGB, width, height,
-//        0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-//
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//
-//    glBindTexture(GL_TEXTURE_2D, 0);
-//}
-//
-//void Texture::genDepthBuffer(unsigned int width, unsigned int height) {
-//    handle_dirty();
-//
-//    m_Type = TextureType::DEPTH_ATTACH;
-//
-//    glBindTexture(GL_TEXTURE_2D, m_TextureID);
-//
-//    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0,
-//                 GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-//
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-//
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-//
-//    glBindTexture(GL_TEXTURE_2D, 0);
-//}

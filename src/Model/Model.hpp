@@ -28,11 +28,12 @@ class Model : public MeshGroup {
     GENERATE_PTR(Model)
 
 public:
-    Model(const std::string& path);
+    Model(const std::string& path, bool pbr = false);
 
 private:
     std::vector<Texture::Ptr> m_TexturesLoaded;
     std::string m_Directory;
+    bool m_Pbr;
 
     void loadModel(std::string path);
 
