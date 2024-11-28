@@ -13,6 +13,12 @@ private:
     float m_Ao;
 public:
 
+    PBRMaterial() :
+        Material(MaterialType::PBR),
+        m_Albedo{1.f}, m_Roughness{0.f},
+        m_Metallic{0.f}, m_Ao{1.f}
+    {}
+
     PBRMaterial(
         const glm::vec3& albedo,
         float roughness,

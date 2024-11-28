@@ -1,5 +1,6 @@
 #include "Model.hpp"
 #include "Lighting/Material.hpp"
+#include "Lighting/PBRMaterial.hpp"
 #include "Lighting/PhongMaterial.hpp"
 #include "assimp/material.h"
 #include "assimp/postprocess.h"
@@ -17,9 +18,6 @@ void Model::loadModel(std::string path) {
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(path,
         aiProcess_Triangulate |
-        aiProcess_JoinIdenticalVertices |
-        aiProcess_SortByPType |
-        aiProcess_RemoveRedundantMaterials |
         aiProcess_FlipUVs |
         aiProcess_GenNormals |
         aiProcess_CalcTangentSpace
@@ -157,7 +155,9 @@ Mesh::Ptr Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         constexpr glm::vec3 DEFAULT_OBJ_COLOR(1.0f);
         _mesh->setMaterial(BasicMaterial::New(DEFAULT_OBJ_COLOR));
     } else {
-        _mesh->setMaterial(PhongMaterial::New());
+        m_Pbr ?
+            _mesh->setMaterial(PBRMaterial::New()) :
+            _mesh->setMaterial(PhongMaterial::New());
     }
 
     return _mesh;
@@ -173,7 +173,7 @@ std::vector<Texture::Ptr> Model::loadMaterialTextures(aiMaterial* mat, aiTexture
         mat->GetTexture(type, i, &str);
         bool skip = false;
 
-        std::cout << "ASSIMP::TEXTURE_FILE::" << str.C_Str() << std::endl;
+        //std::cout << "ASSIMP::TEXTURE_FILE::" << str.C_Str() << std::endl;
         for (unsigned int j = 0; j < m_TexturesLoaded.size(); j++) {
             std::string fname = std::filesystem::path(m_TexturesLoaded[j]->m_Path).filename().string();
             if (std::strcmp(fname.data(), str.C_Str()) == 0)
@@ -191,40 +191,50 @@ std::vector<Texture::Ptr> Model::loadMaterialTextures(aiMaterial* mat, aiTexture
             fpath = m_Directory + '/' + fpath;
 
             TextureType tx_type;
+            TextureConfig tx_conf;
+            tx_conf.flip = false;
 
             switch (type)
             {
                 case aiTextureType_DIFFUSE:
                     tx_type = TextureType::Diffuse;
+                    tx_conf.hdr = true;
                     break;
                 case aiTextureType_SPECULAR:
                     tx_type = TextureType::Specular;
+                    tx_conf.hdr = true;
                     break;
                 case aiTextureType_HEIGHT:
                 case aiTextureType_NORMALS:
                     tx_type = TextureType::Normal;
+                    tx_conf.hdr = false;
                     break;
                 case aiTextureType_BASE_COLOR:
                     tx_type = TextureType::Albedo;
+                    tx_conf.hdr = true;
                     std::cout << "MODE::BASE_TEXTURE" << std::endl;
                     break;
                 case aiTextureType_METALNESS:
                     tx_type = TextureType::Metallic;
+                    tx_conf.hdr = false;
                     std::cout << "MODE::METALLIC_TEXTURE" << std::endl;
                     break;
                 case aiTextureType_DIFFUSE_ROUGHNESS:
                     std::cout << "MODE::ROUGHNESS_TEXTURE" << std::endl;
                     tx_type = TextureType::Roughness;
+                    tx_conf.hdr = false;
                     break;
                 case aiTextureType_AMBIENT_OCCLUSION:
                     std::cout << "MODE::AO_TEXTURE" << std::endl;
                     tx_type = TextureType::Ao;
+                    tx_conf.hdr = false;
                     break;
                 default:
                     tx_type = TextureType::None;
             }
 
-            Texture::Ptr tx = Texture::New(fpath, tx_type);
+
+            Texture::Ptr tx = Texture::New(fpath, tx_type, tx_conf);
 
             if (type == aiTextureType_DIFFUSE)
                 tx->setSlot(0);

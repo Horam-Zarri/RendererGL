@@ -184,7 +184,7 @@ void sendLightPbrUniforms(const Shader::Ptr& shader) {
     }
 
     shader->setVec3("directionalLight.direction", g_SunLight->getDirection());
-    shader->setVec3("directionalLight.color", g_SunLight->getAveragedColor() / 1.5f);
+    shader->setVec3("directionalLight.color", g_SunLight->getAveragedColor());
 }
 
 void renderLightCubes(const Shader::Ptr& shader) {
@@ -847,8 +847,8 @@ int init() {
 
     Scene::Ptr scene = Scene::New();
 
-    //Model::Ptr model1 = Model::New("./assets/Sponza/glTF/Sponza.gltf");
-    Model::Ptr model1 = Model::New("./assets/SponzaR/sponza.glb", true);
+    Model::Ptr model1 = Model::New("./assets/Sponza/glTF/Sponza.gltf", true);
+    //Model::Ptr model1 = Model::New("./assets/SponzaR/sponza.glb", true);
     model1->scale(glm::vec3(0.01));
     Model::Ptr model2 = Model::New("./assets/backpack.obj");
 

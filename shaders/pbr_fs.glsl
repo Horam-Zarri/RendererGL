@@ -53,15 +53,16 @@ uniform MaterialTexture materialMaps;
 
 uniform vec3 camPos;
 
+
 const float PI = 3.14159265359;
 // ----------------------------------------------------------------------------
 // Easy trick to get tangent-normals to world-space to keep PBR code simplified.
 // Don't worry if you don't get what's going on; you generally want to do normal
 // mapping the usual way for performance anyways; I do plan make a note of this
 // technique somewhere later in the normal mapping tutorial.
-vec3 getNormalFromMap(sampler2D normalMap)
+vec3 getNormalFromMap()
 {
-    vec3 tangentNormal = texture(normalMap, fs_in.TexCoords).xyz * 2.0 - 1.0;
+    vec3 tangentNormal = texture(materialMaps.normalMap, fs_in.TexCoords).xyz * 2.0 - 1.0;
 
     vec3 Q1  = dFdx(fs_in.WorldPos);
     vec3 Q2  = dFdy(fs_in.WorldPos);
@@ -75,7 +76,7 @@ vec3 getNormalFromMap(sampler2D normalMap)
 
     return normalize(TBN * tangentNormal);
 }
-
+// ----------------------------------------------------------------------------
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
     float a = roughness*roughness;
@@ -114,6 +115,11 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+// ----------------------------------------------------------------------------
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
+{
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
 vec3 CalcPointLightRadiance(
@@ -159,7 +165,9 @@ vec3 CalcDirLightRadiance(
     float roughness,
     float metallic
 ) {
-    vec3 L = normalize(-light.direction - fs_in.WorldPos);
+    vec3 lightPos = normalize(-light.direction);
+    vec3 worldPos = normalize(fs_in.WorldPos);
+    vec3 L = normalize(lightPos - worldPos);
     vec3 H = normalize(L + V);
 
     float NDF = DistributionGGX(N, H, roughness);
@@ -187,12 +195,14 @@ void main()
 
     _Albedo = hasAlbedo ? texture(materialMaps.albedoMap, fs_in.TexCoords).rgb
         : material.albedo;
-    _Normal = hasNormal ? getNormalFromMap(materialMaps.normalMap)
+    _Normal = hasNormal ? getNormalFromMap()
         : fs_in.Normal;
-    _Metallic = hasMetallic ? texture(materialMaps.metallicMap, fs_in.TexCoords).r
+    _Metallic = hasMetallic ? texture(materialMaps.metallicMap, fs_in.TexCoords).b
         : material.metallic;
+    // If does not include a dedicated roughness map most likely its embedded
+    // in metallic map's green channel
     _Roughness = hasRoughness ? texture(materialMaps.roughnessMap, fs_in.TexCoords).r
-        : material.roughness;
+        : hasMetallic ? texture(materialMaps.metallicMap, fs_in.TexCoords).g : material.roughness;
     _Ao = hasAo ? texture(materialMaps.aoMap, fs_in.TexCoords).r
         : material.ao;
 
@@ -206,10 +216,13 @@ void main()
 
     vec3 Lo = vec3(0.0);
 
-    //Lo += CalcDirLightRadiance(directionalLight, V, N, F0, _Albedo, _Roughness, _Metallic);
+    vec3 lightPos = normalize(-directionalLight.direction);
+    vec3 VD = normalize(lightPos - fs_in.WorldPos);
+
+    Lo += CalcDirLightRadiance(directionalLight, N, V, F0, _Albedo, _Roughness, _Metallic);
 
     for (int i = 0; i < pointLightsSize; i++)
-        Lo += CalcPointLightRadiance(pointLights[i], V, N, F0, _Albedo, _Roughness, _Metallic);
+        Lo += CalcPointLightRadiance(pointLights[i], N, V, F0, _Albedo, _Roughness, _Metallic);
 
     vec3 ambient = vec3(0.03) * _Albedo * _Ao;
     vec3 color = ambient + Lo;
@@ -219,5 +232,5 @@ void main()
     // gamma correct
     // color = pow(color, vec3(1.0/2.2));
 
-    FragColor = vec4(_Roughness, 0.0, 0.0, 1.0);
+    FragColor = vec4(color, 1.0);
 }

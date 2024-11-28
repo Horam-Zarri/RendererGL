@@ -108,13 +108,13 @@ void Texture::genFromFile() {
         glBindTexture(GL_TEXTURE_2D, m_TextureID);
         glTexImage2D(GL_TEXTURE_2D, 0, internal_format, m_Width, m_Height,
                      0, data_format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, m_Config.wrap_s);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, m_Config.wrap_t);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_Config.min_filter);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, m_Config.mag_filter);
 
+        glGenerateMipmap(GL_TEXTURE_2D);
         stbi_image_free(data);
     }
     else {
