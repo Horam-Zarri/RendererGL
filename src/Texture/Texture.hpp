@@ -25,6 +25,7 @@ struct TextureConfig {
 
     int msaa_multiplier;
 
+    bool srgb;
     bool hdr;
 
     bool flip;
@@ -44,7 +45,8 @@ struct TextureConfig {
 
         msaa_multiplier = 4;
 
-        hdr = true;
+        srgb = true;
+        hdr = false;
 
         flip = true;
     }
@@ -54,7 +56,7 @@ enum class TextureType {
     None,
     Diffuse, Specular,
     Normal,
-    CubeMap,
+    CubeMap, CubeMapAttach,
     ColorAttach, ColorAttachMultisample,
     DepthAttach,
     Albedo, Roughness, Ao, Metallic

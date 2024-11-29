@@ -486,7 +486,7 @@ void setupOffscrPass() {
         texOffscr_TConf = texOffscr->getTextureConfig(),
         texOffscrBright_TConf = texOffscrBright->getTextureConfig();
 
-    texOffscr_TConf.hdr = texOffscrBright_TConf.hdr
+    texOffscr_TConf.srgb = texOffscrBright_TConf.srgb
         = g_Engine.HDR_ENBL;
 
     texOffscr->setTextureConfig(texOffscr_TConf);
@@ -809,40 +809,40 @@ int init() {
     };
 
     shaderDefault = Shader::New(
-        SPath("light_cube_vs.glsl"),
-        SPath("light_cube_fs.glsl")
+        SPath("LightCube.vert.glsl"),
+        SPath("LightCube.frag.glsl")
     );
     shaderPhong = Shader::New(
-        SPath("phong_vs.glsl"),
-        SPath("phong_fs.glsl")
+        SPath("Phong.vert.glsl"),
+        SPath("Phong.frag.glsl")
     );
     shaderPostProcess = Shader::New(
-        SPath("screen_PP_vs.glsl"),
-        SPath("screen_PP_fs.glsl")
+        SPath("ScreenPostprocess.vert.glsl"),
+        SPath("ScreenPostprocess.frag.glsl")
     );
     shaderSkybox = Shader::New(
-        SPath("skybox_vs.glsl"),
-        SPath("skybox_fs.glsl")
+        SPath("Skybox.vert.glsl"),
+        SPath("Skybox.frag.glsl")
     );
     shaderShadow = Shader::New(
-        SPath("shadow_map_vs.glsl"),
-        SPath("shadow_map_fs.glsl")
+        SPath("ShadowMap.vert.glsl"),
+        SPath("ShadowMap.frag.glsl")
     );
     shaderBlur = Shader::New(
-        SPath("blur_vs.glsl"),
-        SPath("blur_fs.glsl")
+        SPath("GaussianBlur.vert.glsl"),
+        SPath("GaussianBlur.frag.glsl")
     );
     shaderGBuffer = Shader::New(
-        SPath("g_buffer_vs.glsl"),
-        SPath("g_buffer_fs.glsl")
+        SPath("GBuffer.vert.glsl"),
+        SPath("GBuffer.frag.glsl")
     );
     shaderGLightPass = Shader::New(
-        SPath("g_light_pass_vs.glsl"),
-        SPath("phong_fs.glsl")
+        SPath("GLightPass.vert.glsl"),
+        SPath("Phong.frag.glsl")
     );
     shaderPbr = Shader::New(
-        SPath("pbr_vs.glsl"),
-        SPath("pbr_fs.glsl")
+        SPath("PBR.vert.glsl"),
+        SPath("PBR.frag.glsl")
     );
 
     Scene::Ptr scene = Scene::New();
@@ -1177,7 +1177,7 @@ void updateState() {
             texOffscrBright_TConf = texOffscrBright->getTextureConfig(),
             texOffscrMSAA_TConf = texOffscrMSAA->getTextureConfig();
 
-        texOffscr_TConf.hdr = texOffscrBright_TConf.hdr = texOffscrMSAA_TConf.hdr
+        texOffscr_TConf.srgb = texOffscrBright_TConf.srgb = texOffscrMSAA_TConf.srgb
             = g_Engine.HDR_ENBL;
 
         texOffscrMSAA_TConf.msaa_multiplier = g_Engine.MSAA_MULTIPLIER;

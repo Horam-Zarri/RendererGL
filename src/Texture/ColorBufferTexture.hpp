@@ -14,6 +14,7 @@ private:
         TextureConfig tconf;
         tconf.min_filter = tconf.mag_filter = GL_LINEAR;
         tconf.wrap_s = tconf.wrap_t = GL_CLAMP_TO_EDGE;
+        tconf.hdr = true;
         return tconf;
     }
 public:

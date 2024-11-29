@@ -198,36 +198,36 @@ std::vector<Texture::Ptr> Model::loadMaterialTextures(aiMaterial* mat, aiTexture
             {
                 case aiTextureType_DIFFUSE:
                     tx_type = TextureType::Diffuse;
-                    tx_conf.hdr = true;
+                    tx_conf.srgb = true;
                     break;
                 case aiTextureType_SPECULAR:
                     tx_type = TextureType::Specular;
-                    tx_conf.hdr = true;
+                    tx_conf.srgb = true;
                     break;
                 case aiTextureType_HEIGHT:
                 case aiTextureType_NORMALS:
                     tx_type = TextureType::Normal;
-                    tx_conf.hdr = false;
+                    tx_conf.srgb = false;
                     break;
                 case aiTextureType_BASE_COLOR:
                     tx_type = TextureType::Albedo;
-                    tx_conf.hdr = true;
+                    tx_conf.srgb = true;
                     std::cout << "MODE::BASE_TEXTURE" << std::endl;
                     break;
                 case aiTextureType_METALNESS:
                     tx_type = TextureType::Metallic;
-                    tx_conf.hdr = false;
+                    tx_conf.srgb = false;
                     std::cout << "MODE::METALLIC_TEXTURE" << std::endl;
                     break;
                 case aiTextureType_DIFFUSE_ROUGHNESS:
                     std::cout << "MODE::ROUGHNESS_TEXTURE" << std::endl;
                     tx_type = TextureType::Roughness;
-                    tx_conf.hdr = false;
+                    tx_conf.srgb = false;
                     break;
                 case aiTextureType_AMBIENT_OCCLUSION:
                     std::cout << "MODE::AO_TEXTURE" << std::endl;
                     tx_type = TextureType::Ao;
-                    tx_conf.hdr = false;
+                    tx_conf.srgb = false;
                     break;
                 default:
                     tx_type = TextureType::None;

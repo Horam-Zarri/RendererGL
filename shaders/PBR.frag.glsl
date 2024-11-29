@@ -166,8 +166,8 @@ vec3 CalcDirLightRadiance(
     float metallic
 ) {
     vec3 lightPos = normalize(-light.direction);
-    vec3 worldPos = normalize(fs_in.WorldPos);
-    vec3 L = normalize(lightPos - worldPos);
+    //vec3 worldPos = normalize(fs_in.WorldPos);
+    vec3 L = lightPos;
     vec3 H = normalize(L + V);
 
     float NDF = DistributionGGX(N, H, roughness);
@@ -193,8 +193,19 @@ void main()
     vec3 _Albedo, _Normal;
     float _Metallic, _Roughness, _Ao;
 
-    _Albedo = hasAlbedo ? texture(materialMaps.albedoMap, fs_in.TexCoords).rgb
-        : material.albedo;
+    if (hasAlbedo)
+    {
+        vec4 albedoSample = texture(materialMaps.albedoMap, fs_in.TexCoords);
+        // TODO: Make this bias better
+        if (albedoSample.a < 0.1)
+            discard;
+        _Albedo = albedoSample.rgb;
+    }
+    else
+    {
+        _Albedo = material.albedo;
+    }
+
     _Normal = hasNormal ? getNormalFromMap()
         : fs_in.Normal;
     _Metallic = hasMetallic ? texture(materialMaps.metallicMap, fs_in.TexCoords).b
