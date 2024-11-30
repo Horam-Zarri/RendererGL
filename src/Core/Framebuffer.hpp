@@ -21,6 +21,7 @@ public:
     FrameBuffer();
 
     void attachTexture(int attachment_target, const Texture::Ptr& texture);
+    void attachCubemapTexture(int attachment_target, const Texture::Ptr& texture, int face_slot);
     void attachRenderBuffer(int attachent_target, const RenderBuffer::Ptr& rbo);
 
     void setDrawBuffers(const std::vector<unsigned int>& draw_buffs);

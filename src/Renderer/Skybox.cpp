@@ -53,17 +53,24 @@ static constexpr float skybox_vertices[] = {
 
 Skybox::Skybox(std::array<std::string, 6> faces)
 {
-    TextureConfig sk_conf;
+    TextureConfig sk_conf = defaultConfig();
 
-    sk_conf.min_filter = sk_conf.mag_filter = GL_LINEAR;
-    sk_conf.wrap_t = sk_conf.wrap_s = sk_conf.wrap_t = GL_CLAMP_TO_EDGE;
+    m_SkymapTexture = CubeMapTexture::New(faces, sk_conf);
+    m_SkymapTexture->setSlot(0);
 
-    sk_conf.flip = false;
+    m_VBO = VertexBuffer::New();
+    m_VAO = VertexArray::New();
 
-    std::cout << "NOW SKYMAP" << std::endl;
-    m_Skymap = CubeMapTexture::New(faces, sk_conf);
-    std::cout << "SE POP IN" << std::endl;
-    m_Skymap->setSlot(0);
+    VBLayout layout;
+    layout.push<float>(3);
+
+    m_VBO->sendData(skybox_vertices, sizeof skybox_vertices);
+    m_VAO->sendLayout(m_VBO, layout);
+}
+
+Skybox::Skybox(const CubeMapBufferTexture::Ptr& cubemap_buffer)
+{
+    m_SkymapBuffer = cubemap_buffer;
 
     m_VBO = VertexBuffer::New();
     m_VAO = VertexArray::New();
@@ -78,7 +85,9 @@ Skybox::Skybox(std::array<std::string, 6> faces)
 void Skybox::draw()
 {
     m_VAO->bind();
-    m_Skymap->bind();
+
+    if (m_SkymapTexture) m_SkymapTexture->bind();
+    if (m_SkymapBuffer) m_SkymapBuffer->bind();
 
     glDepthFunc(GL_LEQUAL);
     glDrawArrays(GL_TRIANGLES, 0, 36);

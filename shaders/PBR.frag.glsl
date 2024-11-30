@@ -217,7 +217,7 @@ void main()
     _Ao = hasAo ? texture(materialMaps.aoMap, fs_in.TexCoords).r
         : material.ao;
 
-    //if (gammaCorrect && hasAlbedo) _Albedo = pow(_Albedo, vec3(2.2));
+    if (gammaCorrect && hasAlbedo) _Albedo = pow(_Albedo, vec3(2.2));
 
     vec3 N = normalize(_Normal);
     vec3 V = normalize(camPos - fs_in.WorldPos);
@@ -230,7 +230,7 @@ void main()
     vec3 lightPos = normalize(-directionalLight.direction);
     vec3 VD = normalize(lightPos - fs_in.WorldPos);
 
-    Lo += CalcDirLightRadiance(directionalLight, N, V, F0, _Albedo, _Roughness, _Metallic);
+    //Lo += CalcDirLightRadiance(directionalLight, N, V, F0, _Albedo, _Roughness, _Metallic);
 
     for (int i = 0; i < pointLightsSize; i++)
         Lo += CalcPointLightRadiance(pointLights[i], N, V, F0, _Albedo, _Roughness, _Metallic);

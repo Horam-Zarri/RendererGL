@@ -14,6 +14,14 @@ void FrameBuffer::attachTexture(int attachment_target, const Texture::Ptr& textu
                            texture->getID(), 0);
 }
 
+void FrameBuffer::attachCubemapTexture(int attachment_target, const Texture::Ptr& texture, int face_slot)
+{
+    bind();
+    glFramebufferTexture2D(GL_FRAMEBUFFER, attachment_target,
+                           GL_TEXTURE_CUBE_MAP_POSITIVE_X + face_slot,
+                           texture->getID(), 0);
+}
+
 void FrameBuffer::attachRenderBuffer(int attachent_target, const RenderBuffer::Ptr& rbo)
 {
     bind();

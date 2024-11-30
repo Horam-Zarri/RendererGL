@@ -11,6 +11,7 @@
 #include "Lighting/Light.hpp"
 #include "Lighting/DirectionalLight.hpp"
 #include "Camera.hpp"
+#include "Texture/CubeMapBufferTexture.hpp"
 #include "Texture/MonoBufferTexture.hpp"
 #include "Texture/MultisampleTexture.hpp"
 #include "Texture/ColorBufferTexture.hpp"
@@ -162,6 +163,7 @@ extern Shader::Ptr shaderBlur;
 extern Shader::Ptr shaderGBuffer;
 extern Shader::Ptr shaderGLightPass;
 extern Shader::Ptr shaderPbr;
+extern Shader::Ptr shaderEquirectangularToCubemap;
 
 extern std::vector<Scene::Ptr> g_Scenes;
 extern DirectionalLight::Ptr g_SunLight;
@@ -178,11 +180,13 @@ extern FrameBuffer::Ptr fboBlurHoriz;
 extern FrameBuffer::Ptr fboBlurVert;
 extern FrameBuffer::Ptr fboSSAO;
 extern FrameBuffer::Ptr fboSSAOBlur;
+extern FrameBuffer::Ptr fboEquirectangular;
 
 extern GBuffer::Ptr fboGBuffer;
 
 extern RenderBuffer::Ptr rboOffscr;
 extern RenderBuffer::Ptr rboOffscrMSAA;
+extern RenderBuffer::Ptr rboEquirectangular;
 
 extern DepthBufferTexture::Ptr texShadowmap;
 extern ColorBufferTexture::Ptr texOffscr;
@@ -193,12 +197,14 @@ extern ColorBufferTexture::Ptr texBlurVert;
 extern MonoBufferTexture::Ptr texSSAO;
 extern MonoBufferTexture::Ptr texSSAOBlur;
 extern Texture::Ptr texSSAONoise;
+extern CubeMapBufferTexture::Ptr texEnvironmentMap;
 
 extern Quad::Ptr screenQuad;
 extern Cube::Ptr pointLightsCube;
 
 // TODO: make me a prism or something
 extern Cube::Ptr spotLightsCube;
+
 
 extern Skybox::Ptr skybox;
 // proj and view

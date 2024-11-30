@@ -9,6 +9,7 @@
 
 
 enum class RBType {
+    DEPTH,
     DEPTH_STENCIL,
     DEPTH_STENCIL_MULTISAMPLE
 };

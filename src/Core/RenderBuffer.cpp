@@ -25,6 +25,13 @@ void RenderBuffer::resize(unsigned int width, unsigned int height) const {
             width,
             height
         );
+    else if (m_Type == RBType::DEPTH)
+        glRenderbufferStorage(
+            GL_RENDERBUFFER,
+            GL_DEPTH_COMPONENT32,
+            width,
+            height
+        );
 
     unbind();
 }

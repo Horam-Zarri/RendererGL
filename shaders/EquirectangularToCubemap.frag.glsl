@@ -5,7 +5,7 @@ in vec3 TexCoords;
 
 uniform sampler2D epuirectangularMap;
 
-const vec2 invAtan = (0.1591, 0.3183);
+const vec2 invAtan = vec2(0.1591, 0.3183);
 
 vec2 SampleSphericalMap(vec3 v)
 {

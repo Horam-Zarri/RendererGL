@@ -22,6 +22,7 @@
 #include "Model/Model.hpp"
 
 #include "Texture/ColorBufferTexture.hpp"
+#include "Texture/CubeMapBufferTexture.hpp"
 #include "Texture/DepthBufferTexture.hpp"
 #include "Texture/MonoBufferTexture.hpp"
 #include "Texture/Texture.hpp"
@@ -60,6 +61,7 @@ Shader::Ptr shaderBlur;
 Shader::Ptr shaderGBuffer;
 Shader::Ptr shaderGLightPass;
 Shader::Ptr shaderPbr;
+Shader::Ptr shaderEquirectangularToCubemap;
 
 std::vector<Scene::Ptr> g_Scenes;
 DirectionalLight::Ptr g_SunLight;
@@ -76,11 +78,13 @@ FrameBuffer::Ptr fboBlurHoriz;
 FrameBuffer::Ptr fboBlurVert;
 FrameBuffer::Ptr fboSSAO;
 FrameBuffer::Ptr fboSSAOBlur;
+FrameBuffer::Ptr fboEquirectangular;
 
 GBuffer::Ptr fboGBuffer;
 
 RenderBuffer::Ptr rboOffscr;
 RenderBuffer::Ptr rboOffscrMSAA;
+RenderBuffer::Ptr rboEquirectangular;
 
 DepthBufferTexture::Ptr texShadowmap;
 ColorBufferTexture::Ptr texOffscr;
@@ -91,6 +95,7 @@ ColorBufferTexture::Ptr texBlurVert;
 MonoBufferTexture::Ptr texSSAO;
 MonoBufferTexture::Ptr texSSAOBlur;
 Texture::Ptr texSSAONoise;
+CubeMapBufferTexture::Ptr texEnvironmentMap;
 
 Quad::Ptr screenQuad;
 Cube::Ptr pointLightsCube;
@@ -456,11 +461,12 @@ void backBufferPass() {
     glColorMaski(1, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
     shaderSkybox->use();
-    shaderSkybox->setInt("skybox", TEXTURE_SLOT_SKYBOX);
+    shaderSkybox->setInt("envMap", TEXTURE_SLOT_SKYBOX);
     shaderSkybox->setMat4("view", glm::mat4(glm::mat3(g_View)));
     shaderSkybox->setMat4("projection", g_Proj);
+    texEnvironmentMap->bind();
 
-    //skybox->draw();
+    skybox->draw();
 
     glColorMaski(1, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
@@ -702,7 +708,7 @@ void geometryPass() {
     // Draw skybox
 
     shaderSkybox->use();
-    shaderSkybox->setInt("skybox", TEXTURE_SLOT_SKYBOX);
+    shaderSkybox->setInt("envMap", TEXTURE_SLOT_SKYBOX);
     shaderSkybox->setMat4("view", glm::mat4(glm::mat3(g_View)));
     shaderSkybox->setMat4("projection", g_Proj);
 
@@ -766,6 +772,57 @@ void setupSSAOPass() {
         TextureType::None,
         tconf
     );
+}
+
+CubeMapBufferTexture::Ptr convertEquirectangularToCubemap(const Texture::Ptr& hdrTexture)
+{
+    constexpr unsigned int ENV_MAP_WIDTH = 512, ENV_MAP_HEIGHT = 512;
+
+    if (fboEquirectangular == nullptr) {
+        fboEquirectangular = FrameBuffer::New();
+        rboEquirectangular = RenderBuffer::New(RBType::DEPTH, ENV_MAP_WIDTH, ENV_MAP_HEIGHT);
+        fboEquirectangular->attachRenderBuffer(GL_DEPTH_ATTACHMENT, rboEquirectangular);
+    }
+
+
+    CubeMapBufferTexture::Ptr envCubemap = CubeMapBufferTexture::New(ENV_MAP_WIDTH, ENV_MAP_HEIGHT);
+
+    glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+    glm::mat4 captureViews[] =
+        {
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+        };
+
+    shaderEquirectangularToCubemap->use();
+    shaderEquirectangularToCubemap->setInt("equirectangularMap", 0);
+    shaderEquirectangularToCubemap->setMat4("projection", captureProjection);
+
+    hdrTexture->setSlot(0);
+    hdrTexture->bind();
+
+    glViewport(0, 0, ENV_MAP_WIDTH, ENV_MAP_HEIGHT);
+    fboEquirectangular->bind();
+
+
+    // Use a temporary skybox to draw into cubemap
+    Skybox::Ptr _sk = Skybox::New(envCubemap);
+
+    for (unsigned int i = 0; i < 6; i++)
+    {
+        shaderEquirectangularToCubemap->setMat4("view", captureViews[i]);
+        fboEquirectangular->attachCubemapTexture(GL_COLOR_ATTACHMENT0, envCubemap, i);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        _sk->draw();
+    }
+
+    fboEquirectangular->unbind();
+
+    return envCubemap;
 }
 
 void render() {
@@ -843,6 +900,10 @@ int init() {
     shaderPbr = Shader::New(
         SPath("PBR.vert.glsl"),
         SPath("PBR.frag.glsl")
+    );
+    shaderEquirectangularToCubemap = Shader::New(
+        SPath("Skybox.vert.glsl"),
+        SPath("EquirectangularToCubemap.frag.glsl")
     );
 
     Scene::Ptr scene = Scene::New();
@@ -972,6 +1033,7 @@ int init() {
 
     MeshGroup::Ptr test_pbr = MeshGroup::New();
 
+    TextureConfig tconf_srgb;
     Texture::Ptr txpa = Texture::New("./assets/rst/basecolor.png", TextureType::Albedo);
     Texture::Ptr txpm = Texture::New("./assets/rst/metallic.png", TextureType::Metallic);
     Texture::Ptr txpr = Texture::New("./assets/rst/roughness.png", TextureType::Roughness);
@@ -999,9 +1061,9 @@ int init() {
             Sphere::Ptr sphere = Sphere::New(64, 64);
             sphere->setModelMatrix(model);
 
-            sphere->addTexture(txpa);
-            sphere->addTexture(txpm);
-            sphere->addTexture(txpr);
+            //sphere->addTexture(txpa);
+            //sphere->addTexture(txpm);
+            //sphere->addTexture(txpr);
 
             Material::Ptr mtl = PBRMaterial::New(_albedo, roughness, metallic, _ao);
             sphere->setMaterial(mtl);
@@ -1029,10 +1091,10 @@ int init() {
     }
     //scene->addGroup(test_bloom);
     //scene->addGroup(test_normal);
-    scene->addGroup(model1);
+    //scene->addGroup(model1);
     //scene->addGroup(test_shadow);
     //scene->addGroup(model2);
-    //scene->addGroup(test_pbr);
+    scene->addGroup(test_pbr);
 
     g_Scenes.push_back(scene);
 
@@ -1062,12 +1124,14 @@ int init() {
     for (int j = 0; j < 6; j++)
         std::cout << "FACE::" << j << "::" << faces[j] << std::endl;
 
-    // TODO: Turn on skybox later
-    //skybox = Skybox::New(faces);
+    const Texture::Ptr hdrTexture = Texture::New("./assets/newport_loft.hdr");
+    texEnvironmentMap = convertEquirectangularToCubemap(hdrTexture);
+    texEnvironmentMap->setSlot(0);
 
-    std::cout << "BEFORE SHADOW SETUP" << std::endl;
+    //skybox = Skybox::New(faces);
+    skybox = Skybox::New(texEnvironmentMap);
+
     setupShadowPass();
-    std::cout << "AFTER SHADOW SETUP" << std::endl;
     setupOffscrPass();
     setupGeometryPass();
     setupBloomPass();
@@ -1173,9 +1237,9 @@ void updateState() {
     if (regen_buffers) {
 
         TextureConfig
-            texOffscr_TConf = texOffscr->getTextureConfig(),
-            texOffscrBright_TConf = texOffscrBright->getTextureConfig(),
-            texOffscrMSAA_TConf = texOffscrMSAA->getTextureConfig();
+        texOffscr_TConf = texOffscr->getTextureConfig(),
+        texOffscrBright_TConf = texOffscrBright->getTextureConfig(),
+        texOffscrMSAA_TConf = texOffscrMSAA->getTextureConfig();
 
         texOffscr_TConf.srgb = texOffscrBright_TConf.srgb = texOffscrMSAA_TConf.srgb
             = g_Engine.HDR_ENBL;
