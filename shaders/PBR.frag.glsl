@@ -31,6 +31,10 @@ uniform bool hasRoughness;
 uniform bool hasAo;
 uniform bool hasNormal;
 
+// IBL
+uniform samplerCube irradianceMap;
+uniform bool hasIrradiance=false;
+
 #define NR_MAX_LIGHTS 10
 
 struct PointLight {
@@ -227,16 +231,27 @@ void main()
 
     vec3 Lo = vec3(0.0);
 
-    vec3 lightPos = normalize(-directionalLight.direction);
-    vec3 VD = normalize(lightPos - fs_in.WorldPos);
 
     //Lo += CalcDirLightRadiance(directionalLight, N, V, F0, _Albedo, _Roughness, _Metallic);
 
     for (int i = 0; i < pointLightsSize; i++)
         Lo += CalcPointLightRadiance(pointLights[i], N, V, F0, _Albedo, _Roughness, _Metallic);
 
-    vec3 ambient = vec3(0.03) * _Albedo * _Ao;
-    vec3 color = ambient + Lo;
+
+    vec3 _Ambient;
+
+    if (hasIrradiance) {
+        vec3 kS = fresnelSchlick(max(dot(N, V), 0.0), F0);
+        vec3 kD = 1.0 - kS;
+        kD *= 1.0 - _Metallic;
+        vec3 irradiance = texture(irradianceMap, N).rgb;
+        vec3 diffuse      = irradiance * _Albedo;
+        _Ambient = (kD * diffuse) * _Ao;
+    } else {
+        _Ambient = vec3(0.03) * _Albedo * _Ao;
+    }
+
+    vec3 color = Lo + _Ambient;
 
     // Tone mapping and gamma correction is handled in postprocess
     // color = color / (color + vec3(1.0));

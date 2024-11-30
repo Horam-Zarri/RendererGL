@@ -62,6 +62,7 @@ Shader::Ptr shaderGBuffer;
 Shader::Ptr shaderGLightPass;
 Shader::Ptr shaderPbr;
 Shader::Ptr shaderEquirectangularToCubemap;
+Shader::Ptr shaderIrradiance;
 
 std::vector<Scene::Ptr> g_Scenes;
 DirectionalLight::Ptr g_SunLight;
@@ -78,13 +79,13 @@ FrameBuffer::Ptr fboBlurHoriz;
 FrameBuffer::Ptr fboBlurVert;
 FrameBuffer::Ptr fboSSAO;
 FrameBuffer::Ptr fboSSAOBlur;
-FrameBuffer::Ptr fboEquirectangular;
+FrameBuffer::Ptr fboCapture;
 
 GBuffer::Ptr fboGBuffer;
 
 RenderBuffer::Ptr rboOffscr;
 RenderBuffer::Ptr rboOffscrMSAA;
-RenderBuffer::Ptr rboEquirectangular;
+RenderBuffer::Ptr rboCapture;
 
 DepthBufferTexture::Ptr texShadowmap;
 ColorBufferTexture::Ptr texOffscr;
@@ -96,6 +97,7 @@ MonoBufferTexture::Ptr texSSAO;
 MonoBufferTexture::Ptr texSSAOBlur;
 Texture::Ptr texSSAONoise;
 CubeMapBufferTexture::Ptr texEnvironmentMap;
+CubeMapBufferTexture::Ptr texIrradianceMap;
 
 Quad::Ptr screenQuad;
 Cube::Ptr pointLightsCube;
@@ -103,6 +105,17 @@ Cube::Ptr spotLightsCube;
 
 Skybox::Ptr skybox;
 
+
+glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+glm::mat4 captureViews[] =
+    {
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+    };
 
 void sendLightUniforms(const Shader::Ptr& shader) {
     shader->use();
@@ -383,11 +396,18 @@ void sendOffscrPbrUniforms(const Shader::Ptr& shader) {
 
     shader->setBool("gammaCorrect", true);
 
+    bool hasIrradiance = texIrradianceMap != nullptr;
+    shader->setBool("hasIrradiance", hasIrradiance);
+
     shader->setInt("materialMaps.albedoMap", TEXTURE_SLOT_ALBEDO);
     shader->setInt("materialMaps.normalMap", TEXTURE_SLOT_NORMAL_PBR);
     shader->setInt("materialMaps.roughnessMap", TEXTURE_SLOT_ROUGHNESS);
     shader->setInt("materialMaps.metallicMap", TEXTURE_SLOT_METALLIC);
     shader->setInt("materialMaps.aoMap", TEXTURE_SLOT_AO);
+    shader->setInt("irradianceMap", TEXTURE_SLOT_IRRADIANCE);
+
+    if (hasIrradiance)
+        texIrradianceMap->bind();
 }
 
 void sendLightPassUniforms(const Shader::Ptr& shader) {
@@ -778,25 +798,15 @@ CubeMapBufferTexture::Ptr convertEquirectangularToCubemap(const Texture::Ptr& hd
 {
     constexpr unsigned int ENV_MAP_WIDTH = 512, ENV_MAP_HEIGHT = 512;
 
-    if (fboEquirectangular == nullptr) {
-        fboEquirectangular = FrameBuffer::New();
-        rboEquirectangular = RenderBuffer::New(RBType::DEPTH, ENV_MAP_WIDTH, ENV_MAP_HEIGHT);
-        fboEquirectangular->attachRenderBuffer(GL_DEPTH_ATTACHMENT, rboEquirectangular);
+    if (fboCapture == nullptr) {
+        fboCapture = FrameBuffer::New();
+        rboCapture = RenderBuffer::New(RBType::DEPTH, ENV_MAP_WIDTH, ENV_MAP_HEIGHT);
+        fboCapture->attachRenderBuffer(GL_DEPTH_ATTACHMENT, rboCapture);
+    } else {
+        rboCapture->resize(ENV_MAP_WIDTH, ENV_MAP_HEIGHT);
     }
 
-
     CubeMapBufferTexture::Ptr envCubemap = CubeMapBufferTexture::New(ENV_MAP_WIDTH, ENV_MAP_HEIGHT);
-
-    glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
-    glm::mat4 captureViews[] =
-        {
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
-        };
 
     shaderEquirectangularToCubemap->use();
     shaderEquirectangularToCubemap->setInt("equirectangularMap", 0);
@@ -806,7 +816,7 @@ CubeMapBufferTexture::Ptr convertEquirectangularToCubemap(const Texture::Ptr& hd
     hdrTexture->bind();
 
     glViewport(0, 0, ENV_MAP_WIDTH, ENV_MAP_HEIGHT);
-    fboEquirectangular->bind();
+    fboCapture->bind();
 
 
     // Use a temporary skybox to draw into cubemap
@@ -815,14 +825,55 @@ CubeMapBufferTexture::Ptr convertEquirectangularToCubemap(const Texture::Ptr& hd
     for (unsigned int i = 0; i < 6; i++)
     {
         shaderEquirectangularToCubemap->setMat4("view", captureViews[i]);
-        fboEquirectangular->attachCubemapTexture(GL_COLOR_ATTACHMENT0, envCubemap, i);
+        fboCapture->attachCubemapTexture(GL_COLOR_ATTACHMENT0, envCubemap, i);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         _sk->draw();
     }
 
-    fboEquirectangular->unbind();
+    fboCapture->unbind();
 
     return envCubemap;
+}
+
+CubeMapBufferTexture::Ptr convoluteCubemap(const CubeMapBufferTexture::Ptr& envMap)
+{
+    constexpr unsigned int IRRADIANCE_MAP_WIDTH = 32, IRRADIANCE_MAP_HEIGHT = 32;
+
+    if (fboCapture == nullptr) {
+        fboCapture = FrameBuffer::New();
+        rboCapture = RenderBuffer::New(RBType::DEPTH, IRRADIANCE_MAP_WIDTH, IRRADIANCE_MAP_HEIGHT);
+        fboCapture->attachRenderBuffer(GL_DEPTH_ATTACHMENT, rboCapture);
+    } else {
+        rboCapture->resize(IRRADIANCE_MAP_WIDTH, IRRADIANCE_MAP_HEIGHT);
+    }
+
+
+    CubeMapBufferTexture::Ptr irradianceMap = CubeMapBufferTexture::New(IRRADIANCE_MAP_WIDTH, IRRADIANCE_MAP_HEIGHT);
+
+    shaderIrradiance->use();
+    shaderIrradiance->setInt("envMap", 0);
+    shaderIrradiance->setMat4("projection", captureProjection);
+
+    envMap->setSlot(0);
+    envMap->bind();
+
+    glViewport(0, 0, IRRADIANCE_MAP_WIDTH, IRRADIANCE_MAP_HEIGHT);
+    fboCapture->bind();
+
+    // Use a temporary skybox to render into irradianceMap using envMap
+    Skybox::Ptr _sk = Skybox::New(envMap);
+
+    for (unsigned int i = 0; i < 6; ++i)
+    {
+        shaderIrradiance->setMat4("view", captureViews[i]);
+        fboCapture->attachCubemapTexture(GL_COLOR_ATTACHMENT0, irradianceMap, i);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        _sk->draw();
+    }
+
+    fboCapture->unbind();
+
+    return irradianceMap;
 }
 
 void render() {
@@ -904,6 +955,10 @@ int init() {
     shaderEquirectangularToCubemap = Shader::New(
         SPath("Skybox.vert.glsl"),
         SPath("EquirectangularToCubemap.frag.glsl")
+    );
+    shaderIrradiance = Shader::New(
+        SPath("Skybox.vert.glsl"),
+        SPath("IrradianceConvolution.frag.glsl")
     );
 
     Scene::Ptr scene = Scene::New();
@@ -1125,8 +1180,11 @@ int init() {
         std::cout << "FACE::" << j << "::" << faces[j] << std::endl;
 
     const Texture::Ptr hdrTexture = Texture::New("./assets/newport_loft.hdr");
+
     texEnvironmentMap = convertEquirectangularToCubemap(hdrTexture);
     texEnvironmentMap->setSlot(0);
+    texIrradianceMap = convoluteCubemap(texEnvironmentMap);
+    texIrradianceMap->setSlot(0);
 
     //skybox = Skybox::New(faces);
     skybox = Skybox::New(texEnvironmentMap);

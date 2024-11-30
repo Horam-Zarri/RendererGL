@@ -135,6 +135,7 @@ constexpr static unsigned int TEXTURE_SLOT_METALLIC = 1;
 constexpr static unsigned int TEXTURE_SLOT_ROUGHNESS = 2;
 constexpr static unsigned int TEXTURE_SLOT_NORMAL_PBR = TEXTURE_SLOT_NORMAL;
 constexpr static unsigned int TEXTURE_SLOT_AO = 4;
+constexpr static unsigned int TEXTURE_SLOT_IRRADIANCE = 5;
 
 // Texture slots for shaderPostProcess
 constexpr static unsigned int TEXTURE_SLOT_SCREEN = 0;
@@ -164,6 +165,7 @@ extern Shader::Ptr shaderGBuffer;
 extern Shader::Ptr shaderGLightPass;
 extern Shader::Ptr shaderPbr;
 extern Shader::Ptr shaderEquirectangularToCubemap;
+extern Shader::Ptr shaderIrradiance;
 
 extern std::vector<Scene::Ptr> g_Scenes;
 extern DirectionalLight::Ptr g_SunLight;
@@ -180,13 +182,13 @@ extern FrameBuffer::Ptr fboBlurHoriz;
 extern FrameBuffer::Ptr fboBlurVert;
 extern FrameBuffer::Ptr fboSSAO;
 extern FrameBuffer::Ptr fboSSAOBlur;
-extern FrameBuffer::Ptr fboEquirectangular;
+extern FrameBuffer::Ptr fboCapture;
 
 extern GBuffer::Ptr fboGBuffer;
 
 extern RenderBuffer::Ptr rboOffscr;
 extern RenderBuffer::Ptr rboOffscrMSAA;
-extern RenderBuffer::Ptr rboEquirectangular;
+extern RenderBuffer::Ptr rboCapture;
 
 extern DepthBufferTexture::Ptr texShadowmap;
 extern ColorBufferTexture::Ptr texOffscr;
@@ -198,6 +200,7 @@ extern MonoBufferTexture::Ptr texSSAO;
 extern MonoBufferTexture::Ptr texSSAOBlur;
 extern Texture::Ptr texSSAONoise;
 extern CubeMapBufferTexture::Ptr texEnvironmentMap;
+extern CubeMapBufferTexture::Ptr texIrradianceMap;
 
 extern Quad::Ptr screenQuad;
 extern Cube::Ptr pointLightsCube;
