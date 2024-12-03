@@ -311,7 +311,7 @@ void renderScenes(const Shader::Ptr& shader) {
                     texture->bind();
                 }
 
-                if (pbr) {
+                if (pbr && g_Engine.PBR_ENBL) {
                     shader->setBool("hasAlbedo", hasAlbedo);
                     shader->setBool("hasMetallic", hasMetallic);
                     shader->setBool("hasRoughness", hasRoughness);
@@ -320,7 +320,7 @@ void renderScenes(const Shader::Ptr& shader) {
                     texIrradianceMap->setSlot(TEXTURE_SLOT_IRRADIANCE);
                     texIrradianceMap->bind();
                 } else {
-                    shader->setBool("hasDiffuse", hasDiffuse);
+                    shader->setBool("hasDiffuse", hasDiffuse || hasAlbedo);
                     shader->setBool("hasSpecular", hasSpecular);
                     shader->setBool("hasNormal", hasNormal);
                     texShadowmap->setSlot(TEXTURE_SLOT_SHADOW);
@@ -402,7 +402,7 @@ void sendOffscrPbrUniforms(const Shader::Ptr& shader) {
 
     shader->setMat4("lightSpaceMatrix", g_LightSpaceMatrix);
 
-    shader->setBool("gammaCorrect", true);
+    shader->setBool("gammaCorrect", false);
 
     bool hasIrradiance = texIrradianceMap != nullptr;
     shader->setBool("hasIrradiance", hasIrradiance);
@@ -516,18 +516,23 @@ void setupOffscrPass() {
 
     fboOffscr = FrameBuffer::New();
 
-    texOffscr = ColorBufferTexture::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-    texOffscrBright = ColorBufferTexture::New(g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
-
     TextureConfig
-        texOffscr_TConf = texOffscr->getTextureConfig(),
-        texOffscrBright_TConf = texOffscrBright->getTextureConfig();
+        texOffscr_TConf = ColorBufferTexture::defaultConfig(),
+        texOffscrBright_TConf = ColorBufferTexture::defaultConfig();
 
-    texOffscr_TConf.srgb = texOffscrBright_TConf.srgb
+    texOffscr_TConf.hdr = texOffscrBright_TConf.hdr
         = g_Engine.HDR_ENBL;
 
-    texOffscr->setTextureConfig(texOffscr_TConf);
-    texOffscrBright->setTextureConfig(texOffscrBright_TConf);
+    texOffscr = ColorBufferTexture::New(
+        g_Engine.RENDER_WIDTH,
+        g_Engine.RENDER_HEIGHT,
+        texOffscr_TConf
+    );
+    texOffscrBright = ColorBufferTexture::New(
+        g_Engine.RENDER_WIDTH,
+        g_Engine.RENDER_HEIGHT,
+        texOffscrBright_TConf
+    );
 
     rboOffscr = RenderBuffer::New(RBType::DEPTH_STENCIL, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
 
@@ -887,6 +892,24 @@ CubeMapBufferTexture::Ptr convoluteCubemap(const CubeMapBufferTexture::Ptr& envM
     return irradianceMap;
 }
 
+CubeMapBufferTexture::Ptr generatePrefilterMap(const CubeMapBufferTexture::Ptr& envMap)
+{
+    constexpr unsigned int PREFILTER_MAP_WIDTH = 128, PREFILTER_MAP_HEIGHT = 128;
+
+    TextureConfig prefilterMap_TConf = CubeMapBufferTexture::defaultConfig();
+    prefilterMap_TConf.min_filter = GL_LINEAR_MIPMAP_LINEAR;
+    prefilterMap_TConf.mag_filter = GL_LINEAR;
+    prefilterMap_TConf.gen_mipmap = true;
+
+    CubeMapBufferTexture::Ptr prefilterMap = CubeMapBufferTexture::New(
+        PREFILTER_MAP_WIDTH,
+        PREFILTER_MAP_HEIGHT,
+        prefilterMap_TConf
+    );
+
+    return prefilterMap;
+}
+
 void render() {
 
     using namespace window;
@@ -923,7 +946,7 @@ int init() {
     //glEnable(GL_CULL_FACE);
 
     const auto SPath = [](const std::string p) -> const std::string {
-        constexpr static std::string SHADER_DIR = "./shaders/";
+        constexpr static std::string SHADER_DIR = "./src/GLSL/";
         return SHADER_DIR + p;
     };
 
@@ -1157,10 +1180,10 @@ int init() {
     }
     //scene->addGroup(test_bloom);
     //scene->addGroup(test_normal);
-    //scene->addGroup(model1);
+    scene->addGroup(model1);
     //scene->addGroup(test_shadow);
     //scene->addGroup(model2);
-    scene->addGroup(test_pbr);
+    //scene->addGroup(test_pbr);
 
     g_Scenes.push_back(scene);
 
@@ -1270,6 +1293,11 @@ void updateState() {
 
     bool regen_buffers = false;
 
+    if (g_Engine.PBR_ENBL != ENGINE_STATE.PBR_ENBL) {
+        g_Engine.PBR_ENBL = ENGINE_STATE.PBR_ENBL;
+        regen_buffers = true;
+    }
+
     if (g_Engine.MSAA_ENBL && (g_Engine.MSAA_MULTIPLIER != ENGINE_STATE.MSAA_MULTIPLIER)) {
         // resize implementation of Texture and Renderbuffer
         // handles MSAA change below
@@ -1310,7 +1338,7 @@ void updateState() {
         texOffscrBright_TConf = texOffscrBright->getTextureConfig(),
         texOffscrMSAA_TConf = texOffscrMSAA->getTextureConfig();
 
-        texOffscr_TConf.srgb = texOffscrBright_TConf.srgb = texOffscrMSAA_TConf.srgb
+        texOffscr_TConf.hdr = texOffscrBright_TConf.hdr = texOffscrMSAA_TConf.hdr
             = g_Engine.HDR_ENBL;
 
         texOffscrMSAA_TConf.msaa_multiplier = g_Engine.MSAA_MULTIPLIER;

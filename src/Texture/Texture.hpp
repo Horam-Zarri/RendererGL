@@ -23,6 +23,8 @@ struct TextureConfig {
 
     int data_type;
 
+    int gen_mipmap;
+
     int msaa_multiplier;
 
     bool srgb;
@@ -42,6 +44,8 @@ struct TextureConfig {
         wrap_t = wrap_s = wrap_r = GL_REPEAT;
 
         data_type = GL_UNSIGNED_BYTE;
+
+        gen_mipmap = false;
 
         msaa_multiplier = 4;
 

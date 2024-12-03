@@ -4,15 +4,14 @@
 GBuffer::GBuffer(unsigned int width, unsigned int height)
     : FrameBuffer()
 {
+    TextureConfig gBuffer_TConf = ColorBufferTexture::defaultConfig();
+    gBuffer_TConf.min_filter = gBuffer_TConf.mag_filter = GL_NEAREST;
+    gBuffer_TConf.wrap_s = gBuffer_TConf.wrap_t = GL_CLAMP_TO_EDGE;
 
-    TextureConfig tconf;
-    tconf.min_filter = tconf.mag_filter = GL_NEAREST;
-    tconf.wrap_s = tconf.wrap_t = GL_CLAMP_TO_EDGE;
-
-    m_PositionBuffer = ColorBufferTexture::New(width, height, tconf);
-    m_NormalBuffer = ColorBufferTexture::New(width, height, tconf);
-    m_AlbedoSpecBuffer = ColorBufferTexture::New(width, height, tconf);
-    m_PositionLightSpace = ColorBufferTexture::New(width, height, tconf);
+    m_PositionBuffer = ColorBufferTexture::New(width, height, gBuffer_TConf);
+    m_NormalBuffer = ColorBufferTexture::New(width, height, gBuffer_TConf);
+    m_AlbedoSpecBuffer = ColorBufferTexture::New(width, height, gBuffer_TConf);
+    m_PositionLightSpace = ColorBufferTexture::New(width, height, gBuffer_TConf);
 
     m_RBO = RenderBuffer::New(RBType::DEPTH_STENCIL, width, height);
 

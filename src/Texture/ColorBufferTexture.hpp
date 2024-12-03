@@ -8,8 +8,7 @@
 class ColorBufferTexture : public Texture {
     MAKE_MOVE_ONLY(ColorBufferTexture)
     GENERATE_PTR(ColorBufferTexture)
-
-private:
+public:
     static inline TextureConfig defaultConfig() {
         TextureConfig tconf;
         tconf.min_filter = tconf.mag_filter = GL_LINEAR;
@@ -17,7 +16,6 @@ private:
         tconf.hdr = true;
         return tconf;
     }
-public:
 
     ColorBufferTexture(
         unsigned int width,

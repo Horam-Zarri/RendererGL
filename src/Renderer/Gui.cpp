@@ -81,7 +81,20 @@ void settings_panel() {
 
         ImGui::SeparatorText("General");
 
+        ImGui::Checkbox("PBR", (bool*)&ENGINE_STATE.PBR_ENBL);
+
+        if (ENGINE_STATE.PBR_ENBL)
+        {
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 0, 255));
+            ImGui::Text("Deferred Shading is currently not supported with PBR");
+            ImGui::PopStyleColor();
+            ImGui::BeginDisabled();
+        }
+
         ImGui::Checkbox("Deferred Shading", (bool*)&ENGINE_STATE.DEFERRED_SHADING);
+
+        if (ENGINE_STATE.PBR_ENBL)
+            ImGui::EndDisabled();
 
         ImGui::Checkbox("Blinn", (bool*)&ENGINE_STATE.BLINN_ENBL);
 

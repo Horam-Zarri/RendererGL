@@ -8,7 +8,7 @@
 class CubeMapBufferTexture : public Texture {
     MAKE_MOVE_ONLY(CubeMapBufferTexture)
     GENERATE_PTR(CubeMapBufferTexture)
-private:
+public:
     static inline TextureConfig defaultConfig() {
         TextureConfig tconf;
         tconf.wrap_s = tconf.wrap_t = tconf.wrap_r = GL_CLAMP_TO_EDGE;
@@ -17,7 +17,6 @@ private:
         tconf.data_format = GL_RGB;
         return tconf;
     }
-public:
 
     CubeMapBufferTexture(
         unsigned int width,

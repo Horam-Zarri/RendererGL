@@ -35,6 +35,9 @@ void CubeMapBufferTexture::genTexture()
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, m_Config.wrap_r);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, m_Config.min_filter);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, m_Config.mag_filter);
+
+    if (m_Config.gen_mipmap)
+        glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 }
 
 void CubeMapBufferTexture::bind() const {
