@@ -250,7 +250,6 @@ void renderLightCubes(const Shader::Ptr& shader) {
 
 void renderScenes(const Shader::Ptr& shader) {
     shader->use();
-    texShadowmap->bind();
 
     for (const Scene::Ptr& scene : g_Scenes) {
         for (const MeshGroup::Ptr& mesh_group : scene->getMeshGroups()) {
@@ -317,11 +316,18 @@ void renderScenes(const Shader::Ptr& shader) {
                     shader->setBool("hasMetallic", hasMetallic);
                     shader->setBool("hasRoughness", hasRoughness);
                     shader->setBool("hasAo", hasAo);
+                    texShadowmap->setSlot(TEXTURE_SLOT_SHADOW_PBR);
+                    texIrradianceMap->setSlot(TEXTURE_SLOT_IRRADIANCE);
+                    texIrradianceMap->bind();
                 } else {
                     shader->setBool("hasDiffuse", hasDiffuse);
                     shader->setBool("hasSpecular", hasSpecular);
                     shader->setBool("hasNormal", hasNormal);
+                    texShadowmap->setSlot(TEXTURE_SLOT_SHADOW);
                 }
+
+                // Bind shadow map
+                texShadowmap->bind();
 
                 const auto& material = mesh->getMaterial();
 
@@ -394,6 +400,8 @@ void sendOffscrPbrUniforms(const Shader::Ptr& shader) {
     shader->setMat4("projection", g_Proj);
     shader->setVec3("camPos", camera::g_Camera.Position);
 
+    shader->setMat4("lightSpaceMatrix", g_LightSpaceMatrix);
+
     shader->setBool("gammaCorrect", true);
 
     bool hasIrradiance = texIrradianceMap != nullptr;
@@ -405,6 +413,9 @@ void sendOffscrPbrUniforms(const Shader::Ptr& shader) {
     shader->setInt("materialMaps.metallicMap", TEXTURE_SLOT_METALLIC);
     shader->setInt("materialMaps.aoMap", TEXTURE_SLOT_AO);
     shader->setInt("irradianceMap", TEXTURE_SLOT_IRRADIANCE);
+
+    shader->setBool("hasShadow", g_Engine.SHADOW_ENBL);
+    shader->setInt("shadowMap", TEXTURE_SLOT_SHADOW_PBR);
 
     if (hasIrradiance)
         texIrradianceMap->bind();
@@ -1184,7 +1195,7 @@ int init() {
     texEnvironmentMap = convertEquirectangularToCubemap(hdrTexture);
     texEnvironmentMap->setSlot(0);
     texIrradianceMap = convoluteCubemap(texEnvironmentMap);
-    texIrradianceMap->setSlot(0);
+    texIrradianceMap->setSlot(TEXTURE_SLOT_IRRADIANCE);
 
     //skybox = Skybox::New(faces);
     skybox = Skybox::New(texEnvironmentMap);

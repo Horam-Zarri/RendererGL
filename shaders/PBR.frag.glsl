@@ -6,6 +6,7 @@ in VS_OUT {
     vec2 TexCoords;
     vec3 WorldPos;
     vec3 Normal;
+    vec4 WorldPosLightSpace;
 } fs_in;
 
 struct MaterialSolid {
@@ -57,6 +58,8 @@ uniform MaterialTexture materialMaps;
 
 uniform vec3 camPos;
 
+uniform sampler2D shadowMap;
+uniform bool hasShadow;
 
 const float PI = 3.14159265359;
 // ----------------------------------------------------------------------------
@@ -126,6 +129,38 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
     return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
+float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir) {
+
+    // not required for ortho, but do it anyways
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+
+    projCoords = projCoords * 0.5 + 0.5;
+
+    if (projCoords.z > 1.0)
+        return 0.0;
+
+    float closestDepth = texture(shadowMap, projCoords.xy).r;
+    float currentDepth = projCoords.z;
+
+    float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
+    float shadow = 0.0;
+
+    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+    for(int x = -1; x <= 1; ++x)
+    {
+        for(int y = -1; y <= 1; ++y)
+        {
+            float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) *
+                                     texelSize).r;
+            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+        }
+    }
+
+    shadow /= 9.0;
+
+    return shadow;
+}
+
 vec3 CalcPointLightRadiance(
     PointLight light,
     vec3 N,
@@ -157,6 +192,7 @@ vec3 CalcPointLightRadiance(
     float NdotL = max(dot(N, L), 0.0);
 
     vec3 Lo = (kD * albedo / PI + specular) * radiance * NdotL;
+
     return Lo;
 }
 
@@ -189,6 +225,11 @@ vec3 CalcDirLightRadiance(
     float NdotL = max(dot(N, L), 0.0);
 
     vec3 Lo = (kD * albedo / PI + specular) * light.color * NdotL;
+
+    if (hasShadow) {
+        float shadow = ShadowCalculation(fs_in.WorldPosLightSpace, N, -light.direction);
+        Lo = (1.0 - shadow) * Lo;
+    }
     return Lo;
 }
 
