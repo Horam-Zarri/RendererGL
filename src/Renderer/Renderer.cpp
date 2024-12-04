@@ -63,6 +63,8 @@ Shader::Ptr shaderGLightPass;
 Shader::Ptr shaderPbr;
 Shader::Ptr shaderEquirectangularToCubemap;
 Shader::Ptr shaderIrradiance;
+Shader::Ptr shaderPrefilter;
+Shader::Ptr shaderBrdf;
 
 std::vector<Scene::Ptr> g_Scenes;
 DirectionalLight::Ptr g_SunLight;
@@ -98,6 +100,8 @@ MonoBufferTexture::Ptr texSSAOBlur;
 Texture::Ptr texSSAONoise;
 CubeMapBufferTexture::Ptr texEnvironmentMap;
 CubeMapBufferTexture::Ptr texIrradianceMap;
+CubeMapBufferTexture::Ptr texPrefilterMap;
+ColorBufferTexture::Ptr texBrdfLUT;
 
 Quad::Ptr screenQuad;
 Cube::Ptr pointLightsCube;
@@ -311,14 +315,28 @@ void renderScenes(const Shader::Ptr& shader) {
                     texture->bind();
                 }
 
+                pbr |= mesh->getMaterial()->getType() == MaterialType::PBR;
+
                 if (pbr && g_Engine.PBR_ENBL) {
                     shader->setBool("hasAlbedo", hasAlbedo);
                     shader->setBool("hasMetallic", hasMetallic);
                     shader->setBool("hasRoughness", hasRoughness);
                     shader->setBool("hasAo", hasAo);
                     texShadowmap->setSlot(TEXTURE_SLOT_SHADOW_PBR);
-                    texIrradianceMap->setSlot(TEXTURE_SLOT_IRRADIANCE);
-                    texIrradianceMap->bind();
+
+                    bool hasIBLMaps =
+                        texIrradianceMap != nullptr &&
+                        texPrefilterMap != nullptr &&
+                        texBrdfLUT != nullptr;
+
+                    if (hasIBLMaps) {
+                        texIrradianceMap->setSlot(TEXTURE_SLOT_IRRADIANCE);
+                        texPrefilterMap->setSlot(TEXTURE_SLOT_PREFILTER);
+                        texBrdfLUT->setSlot(TEXTURE_SLOT_BRDF_LUT);
+                        texIrradianceMap->bind();
+                        texPrefilterMap->bind();
+                        texBrdfLUT->bind();
+                    }
                 } else {
                     shader->setBool("hasDiffuse", hasDiffuse || hasAlbedo);
                     shader->setBool("hasSpecular", hasSpecular);
@@ -404,8 +422,12 @@ void sendOffscrPbrUniforms(const Shader::Ptr& shader) {
 
     shader->setBool("gammaCorrect", false);
 
-    bool hasIrradiance = texIrradianceMap != nullptr;
-    shader->setBool("hasIrradiance", hasIrradiance);
+    bool hasIBLMaps =
+        texIrradianceMap != nullptr &&
+        texPrefilterMap != nullptr &&
+        texBrdfLUT != nullptr;
+
+    shader->setBool("hasIBLMaps", hasIBLMaps);
 
     shader->setInt("materialMaps.albedoMap", TEXTURE_SLOT_ALBEDO);
     shader->setInt("materialMaps.normalMap", TEXTURE_SLOT_NORMAL_PBR);
@@ -413,12 +435,17 @@ void sendOffscrPbrUniforms(const Shader::Ptr& shader) {
     shader->setInt("materialMaps.metallicMap", TEXTURE_SLOT_METALLIC);
     shader->setInt("materialMaps.aoMap", TEXTURE_SLOT_AO);
     shader->setInt("irradianceMap", TEXTURE_SLOT_IRRADIANCE);
+    shader->setInt("prefilterMap", TEXTURE_SLOT_PREFILTER);
+    shader->setInt("brdfLUT", TEXTURE_SLOT_BRDF_LUT);
 
     shader->setBool("hasShadow", g_Engine.SHADOW_ENBL);
     shader->setInt("shadowMap", TEXTURE_SLOT_SHADOW_PBR);
 
-    if (hasIrradiance)
+    if (hasIBLMaps) {
         texIrradianceMap->bind();
+        texPrefilterMap->bind();
+        texBrdfLUT->bind();
+    }
 }
 
 void sendLightPassUniforms(const Shader::Ptr& shader) {
@@ -495,7 +522,6 @@ void backBufferPass() {
     shaderSkybox->setInt("envMap", TEXTURE_SLOT_SKYBOX);
     shaderSkybox->setMat4("view", glm::mat4(glm::mat3(g_View)));
     shaderSkybox->setMat4("projection", g_Proj);
-    texEnvironmentMap->bind();
 
     skybox->draw();
 
@@ -724,7 +750,9 @@ void postprocessPass() {
 
 void setupPostprocessPass() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    screenQuad = Quad::New();
+
+    if (screenQuad == nullptr)
+        screenQuad = Quad::New();
 }
 
 void geometryPass() {
@@ -894,7 +922,16 @@ CubeMapBufferTexture::Ptr convoluteCubemap(const CubeMapBufferTexture::Ptr& envM
 
 CubeMapBufferTexture::Ptr generatePrefilterMap(const CubeMapBufferTexture::Ptr& envMap)
 {
-    constexpr unsigned int PREFILTER_MAP_WIDTH = 128, PREFILTER_MAP_HEIGHT = 128;
+    constexpr unsigned int
+        PREFILTER_MAP_WIDTH = 128,
+        PREFILTER_MAP_HEIGHT = 128,
+        PREFILTER_MIP_LEVELS = 5;
+
+    if (fboCapture == nullptr) {
+        fboCapture = FrameBuffer::New();
+        rboCapture = RenderBuffer::New(RBType::DEPTH, PREFILTER_MAP_WIDTH, PREFILTER_MAP_HEIGHT);
+        fboCapture->attachRenderBuffer(GL_DEPTH_ATTACHMENT, rboCapture);
+    }
 
     TextureConfig prefilterMap_TConf = CubeMapBufferTexture::defaultConfig();
     prefilterMap_TConf.min_filter = GL_LINEAR_MIPMAP_LINEAR;
@@ -907,7 +944,87 @@ CubeMapBufferTexture::Ptr generatePrefilterMap(const CubeMapBufferTexture::Ptr& 
         prefilterMap_TConf
     );
 
+    envMap->bind();
+    envMap->bind();
+
+    shaderPrefilter->use();
+    shaderPrefilter->setInt("envMap", 0);
+    shaderPrefilter->setMat4("projection", captureProjection);
+
+    fboCapture->bind();
+
+    Skybox::Ptr _sk = Skybox::New(envMap);
+
+    for (unsigned int mip = 0; mip < PREFILTER_MIP_LEVELS; ++mip)
+    {
+        unsigned int mipWidth = PREFILTER_MAP_WIDTH * std::pow(0.5, mip);
+        unsigned int mipHeight = PREFILTER_MAP_HEIGHT * std::pow(0.5, mip);
+
+        rboCapture->resize(mipWidth, mipHeight);
+        glViewport(0, 0, mipWidth, mipHeight);
+
+        float roughness = (float)mip / (float)(PREFILTER_MIP_LEVELS - 1);
+        shaderPrefilter->setFloat("roughness", roughness);
+        for (unsigned int i = 0; i < 6; ++i)
+        {
+            shaderPrefilter->setMat4("view", captureViews[i]);
+            fboCapture->attachCubemapTexture(
+                GL_COLOR_ATTACHMENT0,
+                prefilterMap,
+                i,
+                mip
+            );
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            _sk->draw();
+        }
+    }
+
+    fboCapture->unbind();
+
     return prefilterMap;
+}
+
+ColorBufferTexture::Ptr generateBrdf()
+{
+    constexpr unsigned int
+        BRDF_MAP_WIDTH = 512,
+        BRDF_MAP_HEIGHT = 512;
+
+    if (fboCapture == nullptr) {
+        fboCapture = FrameBuffer::New();
+        rboCapture = RenderBuffer::New(RBType::DEPTH, BRDF_MAP_WIDTH, BRDF_MAP_HEIGHT);
+        fboCapture->attachRenderBuffer(GL_DEPTH_ATTACHMENT, rboCapture);
+    } else {
+        rboCapture->resize(BRDF_MAP_WIDTH, BRDF_MAP_HEIGHT);
+    }
+
+    TextureConfig texBrdf_TConf;
+    texBrdf_TConf.internal_format = GL_RG16F;
+    texBrdf_TConf.data_format = GL_RG;
+    texBrdf_TConf.data_type = GL_FLOAT;
+
+    texBrdf_TConf.wrap_s = texBrdf_TConf.wrap_t = GL_CLAMP_TO_EDGE;
+    texBrdf_TConf.min_filter = texBrdf_TConf.mag_filter = GL_LINEAR;
+
+    ColorBufferTexture::Ptr texBrdf = ColorBufferTexture::New(
+        BRDF_MAP_WIDTH,
+        BRDF_MAP_HEIGHT,
+        texBrdf_TConf
+    );
+
+    fboCapture->bind();
+    fboCapture->attachTexture(GL_COLOR_ATTACHMENT0, texBrdf);
+
+    shaderBrdf->use();
+
+    glViewport(0, 0, BRDF_MAP_WIDTH, BRDF_MAP_HEIGHT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    screenQuad->draw();
+
+    fboCapture->unbind();
+
+    return texBrdf;
 }
 
 void render() {
@@ -944,6 +1061,7 @@ int init() {
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_STENCIL_TEST);
     //glEnable(GL_CULL_FACE);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
     const auto SPath = [](const std::string p) -> const std::string {
         constexpr static std::string SHADER_DIR = "./src/GLSL/";
@@ -993,6 +1111,14 @@ int init() {
     shaderIrradiance = Shader::New(
         SPath("Skybox.vert.glsl"),
         SPath("IrradianceConvolution.frag.glsl")
+    );
+    shaderPrefilter = Shader::New(
+        SPath("Skybox.vert.glsl"),
+        SPath("PrefilterMap.frag.glsl")
+    );
+    shaderBrdf = Shader::New(
+        SPath("ScreenPostprocess.vert.glsl"),
+        SPath("BRDF.frag.glsl")
     );
 
     Scene::Ptr scene = Scene::New();
@@ -1180,10 +1306,10 @@ int init() {
     }
     //scene->addGroup(test_bloom);
     //scene->addGroup(test_normal);
-    scene->addGroup(model1);
+    //scene->addGroup(model1);
     //scene->addGroup(test_shadow);
     //scene->addGroup(model2);
-    //scene->addGroup(test_pbr);
+    scene->addGroup(test_pbr);
 
     g_Scenes.push_back(scene);
 
@@ -1215,11 +1341,14 @@ int init() {
 
     const Texture::Ptr hdrTexture = Texture::New("./assets/newport_loft.hdr");
 
+    screenQuad = Quad::New();
+
     texEnvironmentMap = convertEquirectangularToCubemap(hdrTexture);
     texEnvironmentMap->setSlot(0);
     texIrradianceMap = convoluteCubemap(texEnvironmentMap);
     texIrradianceMap->setSlot(TEXTURE_SLOT_IRRADIANCE);
-
+    texPrefilterMap = generatePrefilterMap(texEnvironmentMap);
+    texBrdfLUT = generateBrdf();
     //skybox = Skybox::New(faces);
     skybox = Skybox::New(texEnvironmentMap);
 

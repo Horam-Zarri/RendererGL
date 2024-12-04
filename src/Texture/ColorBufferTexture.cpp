@@ -16,16 +16,23 @@ ColorBufferTexture::ColorBufferTexture(
 void ColorBufferTexture::genTexture() {
     bind();
 
-    auto internal_format = m_Config.hdr ? GL_RGBA32F : GL_RGB;
-    auto format = m_Config.hdr ? GL_RGBA : GL_RGB;
-    auto type = format == GL_RGBA ? GL_FLOAT : GL_UNSIGNED_BYTE;
+    GLint internal_format = m_Config.internal_format;
+    GLint data_format = m_Config.data_format;
+    GLenum type = m_Config.data_type;
+
+    if (internal_format == -1 || data_format == -1)
+    {
+        internal_format = m_Config.hdr ? GL_RGBA32F : GL_RGB;
+        data_format = m_Config.hdr ? GL_RGBA : GL_RGB;
+        type = data_format == GL_RGBA ? GL_FLOAT : GL_UNSIGNED_BYTE;
+    }
 
     glTexImage2D(
         GL_TEXTURE_2D,
         0, internal_format,
         m_Width,
         m_Height,
-        0, format,
+        0, data_format,
         type,
         NULL
     );

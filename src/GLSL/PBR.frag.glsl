@@ -34,7 +34,9 @@ uniform bool hasNormal;
 
 // IBL
 uniform samplerCube irradianceMap;
-uniform bool hasIrradiance=false;
+uniform samplerCube prefilterMap;
+uniform sampler2D brdfLUT;
+uniform bool hasIBLMaps=false;
 
 #define NR_MAX_LIGHTS 10
 
@@ -266,6 +268,7 @@ void main()
 
     vec3 N = normalize(_Normal);
     vec3 V = normalize(camPos - fs_in.WorldPos);
+    vec3 R = reflect(-V, N);
 
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, _Albedo, _Metallic);
@@ -281,13 +284,20 @@ void main()
 
     vec3 _Ambient;
 
-    if (hasIrradiance) {
+    if (hasIBLMaps) {
         vec3 kS = fresnelSchlick(max(dot(N, V), 0.0), F0);
         vec3 kD = 1.0 - kS;
         kD *= 1.0 - _Metallic;
+
         vec3 irradiance = texture(irradianceMap, N).rgb;
-        vec3 diffuse      = irradiance * _Albedo;
-        _Ambient = (kD * diffuse) * _Ao;
+        vec3 diffuse = irradiance * _Albedo;
+
+        const float MAX_REFLECTION_LOD = 4.0;
+        vec3 prefilteredColor = textureLod(prefilterMap, R, _Roughness * MAX_REFLECTION_LOD).rgb;
+        vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), _Roughness)).rg;
+        vec3 specular = prefilteredColor * (kS * brdf.x + brdf.y);
+
+        _Ambient = (kD * diffuse + specular) * _Ao;
     } else {
         _Ambient = vec3(0.03) * _Albedo * _Ao;
     }
@@ -300,4 +310,5 @@ void main()
     // color = pow(color, vec3(1.0/2.2));
 
     FragColor = vec4(color, 1.0);
+
 }

@@ -137,6 +137,8 @@ constexpr static unsigned int TEXTURE_SLOT_NORMAL_PBR = TEXTURE_SLOT_NORMAL;
 constexpr static unsigned int TEXTURE_SLOT_ROUGHNESS = 4;
 constexpr static unsigned int TEXTURE_SLOT_AO = 5;
 constexpr static unsigned int TEXTURE_SLOT_IRRADIANCE = 6;
+constexpr static unsigned int TEXTURE_SLOT_PREFILTER = 7;
+constexpr static unsigned int TEXTURE_SLOT_BRDF_LUT = 8;
 
 // Texture slots for shaderPostProcess
 constexpr static unsigned int TEXTURE_SLOT_SCREEN = 0;
@@ -167,6 +169,8 @@ extern Shader::Ptr shaderGLightPass;
 extern Shader::Ptr shaderPbr;
 extern Shader::Ptr shaderEquirectangularToCubemap;
 extern Shader::Ptr shaderIrradiance;
+extern Shader::Ptr shaderPrefilter;
+extern Shader::Ptr shaderBrdf;
 
 extern std::vector<Scene::Ptr> g_Scenes;
 extern DirectionalLight::Ptr g_SunLight;
@@ -202,6 +206,8 @@ extern MonoBufferTexture::Ptr texSSAOBlur;
 extern Texture::Ptr texSSAONoise;
 extern CubeMapBufferTexture::Ptr texEnvironmentMap;
 extern CubeMapBufferTexture::Ptr texIrradianceMap;
+extern CubeMapBufferTexture::Ptr texPrefilterMap;
+extern ColorBufferTexture::Ptr texBrdfLUT;
 
 extern Quad::Ptr screenQuad;
 extern Cube::Ptr pointLightsCube;
