@@ -158,7 +158,7 @@ namespace camera {
 extern EngineState ENGINE_STATE;
 extern EngineState g_Engine;
 
-extern Shader::Ptr shaderDefault;
+extern Shader::Ptr shaderLightCube;
 extern Shader::Ptr shaderPhong;
 extern Shader::Ptr shaderPostProcess;
 extern Shader::Ptr shaderSkybox;

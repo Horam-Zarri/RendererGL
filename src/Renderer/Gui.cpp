@@ -158,6 +158,9 @@ void settings_panel() {
             renderer::addSpotLight();
         }
 
+        static bool advanced_lighting_settings = false;
+        ImGui::Checkbox("Advanced Light Settings", &advanced_lighting_settings);
+
         ImGui::Spacing();
 
         // TODO: eh?
@@ -197,17 +200,25 @@ void settings_panel() {
                 if (ImGui::DragFloat3("Direction", &sl_dir.x)) { sl->setDirection(sl_dir); }
             }
 
-            if (ImGui::DragFloat3("Ambient", &pl_ambient.x, .05f, 0.0f)) { pl->setAmbient(pl_ambient); }
-            if (ImGui::DragFloat3("Diffuse", &pl_diffuse.x, .05f, 0.0f)) { pl->setDiffuse(pl_diffuse); }
-            if (ImGui::DragFloat3("Specular", &pl_specular.x, .05f, 0.0f)) { pl->setSpecular(pl_specular); }
+
+            if (advanced_lighting_settings) {
+                if (ImGui::DragFloat3("Ambient", &pl_ambient.x, .05f, 0.0f)) { pl->setAmbient(pl_ambient); }
+                if (ImGui::DragFloat3("Diffuse", &pl_diffuse.x, .05f, 0.0f)) { pl->setDiffuse(pl_diffuse); }
+                if (ImGui::DragFloat3("Specular", &pl_specular.x, .05f, 0.0f)) { pl->setSpecular(pl_specular); }
+            } else {
+                glm::vec3 basic_color = pl->getAveragedColor();
+                if (ImGui::DragFloat3("Color", &basic_color.x, .05f, 0.0f)) { pl->setColor(basic_color);}
+            }
 
             ImGui::Spacing();
             ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.2);
 
-            if (ImGui::DragFloat("Constant", &pl_atten.constant, .01f, 1.0)) { pl->setAttenuation(pl_atten); }
-            ImGui::SameLine();
-            if (ImGui::DragFloat("Linear", &pl_atten.linear, .01f, 0.0)) { pl->setAttenuation(pl_atten); }
-            if (ImGui::DragFloat("Quadratic", &pl_atten.quadratic, .01, 0.0)) { pl->setAttenuation(pl_atten); }
+            if (advanced_lighting_settings) {
+                if (ImGui::DragFloat("Constant", &pl_atten.constant, .01f, 1.0)) { pl->setAttenuation(pl_atten); }
+                ImGui::SameLine();
+                if (ImGui::DragFloat("Linear", &pl_atten.linear, .01f, 0.0)) { pl->setAttenuation(pl_atten); }
+                if (ImGui::DragFloat("Quadratic", &pl_atten.quadratic, .01, 0.0)) { pl->setAttenuation(pl_atten); }
+            }
 
 
             if (sl == nullptr) {

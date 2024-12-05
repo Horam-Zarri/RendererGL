@@ -1,4 +1,5 @@
 #include "Model.hpp"
+#include "3rdParty/assimp/code/AssetLib/3MF/3MFXmlTags.h"
 #include "Lighting/Material.hpp"
 #include "Lighting/PBRMaterial.hpp"
 #include "Lighting/PhongMaterial.hpp"
@@ -115,34 +116,30 @@ Mesh::Ptr Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     {
         aiMaterial *mtl = scene->mMaterials[mesh->mMaterialIndex];
 
+        auto loadTex = [this, mtl, scene](aiTextureType type) {
+            return loadMaterialTextures(mtl, type);
+        };
+
         if (m_Pbr) {
-            std::vector<Texture::Ptr> albedoMaps = loadMaterialTextures(
-                mtl, aiTextureType_BASE_COLOR);
+            std::vector<Texture::Ptr> albedoMaps = loadTex(aiTextureType_BASE_COLOR);
             textures.insert(textures.end(), albedoMaps.begin(), albedoMaps.end());
-            std::vector<Texture::Ptr> normalMaps = loadMaterialTextures(
-                mtl, aiTextureType_NORMALS);
+            std::vector<Texture::Ptr> normalMaps = loadTex(aiTextureType_NORMALS);
             textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
-            std::vector<Texture::Ptr> metallicMaps = loadMaterialTextures(
-                mtl, aiTextureType_METALNESS);
+            std::vector<Texture::Ptr> metallicMaps = loadTex(aiTextureType_METALNESS);
             textures.insert(textures.end(), metallicMaps.begin(), metallicMaps.end());
-            std::vector<Texture::Ptr> roughnessMaps = loadMaterialTextures(
-                mtl, aiTextureType_DIFFUSE_ROUGHNESS);
+            std::vector<Texture::Ptr> roughnessMaps = loadTex(aiTextureType_DIFFUSE_ROUGHNESS);
             textures.insert(textures.end(), roughnessMaps.begin(), roughnessMaps.end());
-            std::vector<Texture::Ptr> aoMaps = loadMaterialTextures(
-                mtl, aiTextureType_AMBIENT_OCCLUSION);
+            std::vector<Texture::Ptr> aoMaps = loadTex(aiTextureType_AMBIENT_OCCLUSION);
             textures.insert(textures.end(), aoMaps.begin(), aoMaps.end());
         }
         else {
-            std::vector<Texture::Ptr> diffuseMaps = loadMaterialTextures(
-                mtl, aiTextureType_DIFFUSE);
+            std::vector<Texture::Ptr> diffuseMaps = loadTex(aiTextureType_DIFFUSE);
             textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
 
-            std::vector<Texture::Ptr> specularMaps = loadMaterialTextures(
-                mtl, aiTextureType_SPECULAR);
+            std::vector<Texture::Ptr> specularMaps = loadTex(aiTextureType_SPECULAR);
             textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
 
-            std::vector<Texture::Ptr> normalMaps = loadMaterialTextures(
-                mtl, aiTextureType_HEIGHT);
+            std::vector<Texture::Ptr> normalMaps = loadTex(aiTextureType_HEIGHT);
             textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
         }
     }
@@ -150,6 +147,8 @@ Mesh::Ptr Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     std::cout << "AFTER MATERIAL" << std::endl;
 
     Mesh::Ptr _mesh = Mesh::New(vertices, indices, textures);
+
+    std::cout << "TEXTURES SIZE AFTER LOAD " << textures.size() << std::endl;
 
     if (textures.empty()) {
         constexpr glm::vec3 DEFAULT_OBJ_COLOR(1.0f);
@@ -163,23 +162,22 @@ Mesh::Ptr Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     return _mesh;
 }
 
-std::vector<Texture::Ptr> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type)
+std::vector<Texture::Ptr> Model::loadMaterialTextures(aiMaterial* mtl, aiTextureType type)
 {
     std::vector<Texture::Ptr> textures;
-    //std::cout << "ASSIMP::TEXTURE_COUNT::" << type << "::"  << mat->GetTextureCount(type) << std::endl;
+    std::cout << "ASSIMP::TEXTURE_COUNT::" << type << "::"  << mtl->GetTextureCount(type) << std::endl;
 
-    for (unsigned int i = 0; i < mat->GetTextureCount(type); i++) {
+    for (unsigned int i = 0; i < mtl->GetTextureCount(type); i++) {
         aiString str;
-        mat->GetTexture(type, i, &str);
+        mtl->GetTexture(type, i, &str);
         bool skip = false;
 
-        //std::cout << "ASSIMP::TEXTURE_FILE::" << str.C_Str() << std::endl;
+        std::cout << "ASSIMP::TEXTURE_FILE::" << str.C_Str() << std::endl;
         for (unsigned int j = 0; j < m_TexturesLoaded.size(); j++) {
             std::string fname = std::filesystem::path(m_TexturesLoaded[j]->m_Path).filename().string();
             if (std::strcmp(fname.data(), str.C_Str()) == 0)
             {
-                //std::cout << "ASSIMP::TEXTURE_ALREADY_EXISTS" << std::endl;
-                textures.push_back(m_TexturesLoaded[j]);
+                std::cout << "ASSIMP::TEXTURE_ALREADY_EXISTS" << std::endl;
                 skip = true;
                 break;
             }
@@ -189,6 +187,8 @@ std::vector<Texture::Ptr> Model::loadMaterialTextures(aiMaterial* mat, aiTexture
 
             std::string fpath = std::string(str.C_Str());
             fpath = m_Directory + '/' + fpath;
+
+            std::cout << fpath << std::endl;
 
             TextureType tx_type;
             TextureConfig tx_conf;
@@ -236,6 +236,7 @@ std::vector<Texture::Ptr> Model::loadMaterialTextures(aiMaterial* mat, aiTexture
 
             Texture::Ptr tx = Texture::New(fpath, tx_type, tx_conf);
 
+            // TODO: Set texture slots
             if (type == aiTextureType_DIFFUSE)
                 tx->setSlot(0);
             else

@@ -30,6 +30,15 @@ class Model : public MeshGroup {
 public:
     Model(const std::string& path, bool pbr = false);
 
+    void addModelTexture(const Texture::Ptr& texture)
+    {
+        if (!isSingleMesh())
+        {
+            std::cout << "MODEL::ERROR::Custom texture set is only allowed for single mesh models";
+            std::exit(11);
+        }
+        m_Meshes[0]->addTexture(texture);
+    }
 private:
     std::vector<Texture::Ptr> m_TexturesLoaded;
     std::string m_Directory;
@@ -41,6 +50,15 @@ private:
     Mesh::Ptr processMesh(aiMesh* mesh, const aiScene* scene);
 
     std::vector<Texture::Ptr> loadMaterialTextures(aiMaterial* mat, aiTextureType type);
+
+    inline const std::vector<Texture::Ptr>& getLoadedTextures() const {
+        return m_TexturesLoaded;
+    }
+
+    inline bool isSingleMesh() const {
+        return m_Meshes.size() == 1;
+    }
+
 };
 
 #endif

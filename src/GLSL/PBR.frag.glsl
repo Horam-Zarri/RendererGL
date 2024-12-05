@@ -276,7 +276,7 @@ void main()
     vec3 Lo = vec3(0.0);
 
 
-    //Lo += CalcDirLightRadiance(directionalLight, N, V, F0, _Albedo, _Roughness, _Metallic);
+    Lo += CalcDirLightRadiance(directionalLight, N, V, F0, _Albedo, _Roughness, _Metallic);
 
     for (int i = 0; i < pointLightsSize; i++)
         Lo += CalcPointLightRadiance(pointLights[i], N, V, F0, _Albedo, _Roughness, _Metallic);
@@ -310,5 +310,4 @@ void main()
     // color = pow(color, vec3(1.0/2.2));
 
     FragColor = vec4(color, 1.0);
-
 }

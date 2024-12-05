@@ -70,7 +70,14 @@ public:
     inline const glm::vec3& getSpecular() const { return m_Specular; }
 
     inline const glm::vec3 getAveragedColor() const {
-        return glm::vec3((m_Ambient + m_Diffuse + m_Specular / 3.f));
+        return (m_Ambient + m_Diffuse + m_Specular) / 3.f;
+    }
+
+    inline const glm::vec3 getAveragedColorClamp(float clamp_v = 1.f) const {
+        glm::vec3 avg = getAveragedColor();
+        float max = std::fmax(std::fmax(avg.r, avg.b), avg.g);
+        avg *= (clamp_v / max);
+        return avg;
     }
 
     inline void setAmbient(const glm::vec3& ambient) { m_Ambient = ambient; }

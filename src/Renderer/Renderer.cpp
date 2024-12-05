@@ -52,7 +52,7 @@ EngineState ENGINE_STATE;
 Camera camera::g_Camera(glm::vec3(0.0f, 0.0f, 3.0f));
 Camera camera::CAMERA_STATE(glm::vec3(0.0f, 0.0f, 3.0f));
 
-Shader::Ptr shaderDefault;
+Shader::Ptr shaderLightCube;
 Shader::Ptr shaderPhong;
 Shader::Ptr shaderPostProcess;
 Shader::Ptr shaderSkybox;
@@ -215,7 +215,7 @@ void renderLightCubes(const Shader::Ptr& shader) {
 
         const auto& light = g_Lights[i];
 
-        shader->setVec3("lightColor", light->getAveragedColor());
+        shader->setVec3("lightColor", light->getAveragedColorClamp());
 
         glm::mat4 md(1.0f);
 
@@ -353,7 +353,7 @@ void renderScenes(const Shader::Ptr& shader) {
                     MaterialType mat_type = material->getType();
                     if (mat_type == MaterialType::Solid) {
                         BasicMaterial::Ptr basic_mat = std::dynamic_pointer_cast<BasicMaterial>(material);
-                        shaderDefault->setVec3("obj_color", basic_mat->getObjColor());
+                        shaderLightCube->setVec3("obj_color", basic_mat->getObjColor());
                     }
                     else if (mat_type == MaterialType::Phong) {
                         PhongMaterial::Ptr phong_mat = std::dynamic_pointer_cast<PhongMaterial>(material);
@@ -528,7 +528,7 @@ void backBufferPass() {
     glColorMaski(1, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
     // Draw lights cube debug
-    renderLightCubes(shaderDefault);
+    renderLightCubes(shaderLightCube);
 
     if (g_Engine.MSAA_ENBL)
         fboOffscrMSAA->blitColorTo(fboOffscr, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
@@ -840,7 +840,7 @@ void setupSSAOPass() {
 
 CubeMapBufferTexture::Ptr convertEquirectangularToCubemap(const Texture::Ptr& hdrTexture)
 {
-    constexpr unsigned int ENV_MAP_WIDTH = 512, ENV_MAP_HEIGHT = 512;
+    constexpr unsigned int ENV_MAP_WIDTH = 1024, ENV_MAP_HEIGHT = 1024;
 
     if (fboCapture == nullptr) {
         fboCapture = FrameBuffer::New();
@@ -881,7 +881,7 @@ CubeMapBufferTexture::Ptr convertEquirectangularToCubemap(const Texture::Ptr& hd
 
 CubeMapBufferTexture::Ptr convoluteCubemap(const CubeMapBufferTexture::Ptr& envMap)
 {
-    constexpr unsigned int IRRADIANCE_MAP_WIDTH = 32, IRRADIANCE_MAP_HEIGHT = 32;
+    constexpr unsigned int IRRADIANCE_MAP_WIDTH = 64, IRRADIANCE_MAP_HEIGHT = 64;
 
     if (fboCapture == nullptr) {
         fboCapture = FrameBuffer::New();
@@ -987,8 +987,8 @@ CubeMapBufferTexture::Ptr generatePrefilterMap(const CubeMapBufferTexture::Ptr& 
 ColorBufferTexture::Ptr generateBrdf()
 {
     constexpr unsigned int
-        BRDF_MAP_WIDTH = 512,
-        BRDF_MAP_HEIGHT = 512;
+        BRDF_MAP_WIDTH = 1024,
+        BRDF_MAP_HEIGHT = 1024;
 
     if (fboCapture == nullptr) {
         fboCapture = FrameBuffer::New();
@@ -1068,7 +1068,7 @@ int init() {
         return SHADER_DIR + p;
     };
 
-    shaderDefault = Shader::New(
+    shaderLightCube = Shader::New(
         SPath("LightCube.vert.glsl"),
         SPath("LightCube.frag.glsl")
     );
@@ -1123,10 +1123,29 @@ int init() {
 
     Scene::Ptr scene = Scene::New();
 
-    Model::Ptr model1 = Model::New("./assets/Sponza/glTF/Sponza.gltf", true);
+    //Model::Ptr model1 = Model::New("./assets/Sponza/glTF/Sponza.gltf", true);
     //Model::Ptr model1 = Model::New("./assets/SponzaR/sponza.glb", true);
-    model1->scale(glm::vec3(0.01));
-    Model::Ptr model2 = Model::New("./assets/backpack.obj");
+    //model1->scale(glm::vec3(0.01));
+    //Model::Ptr model2 = Model::New("./assets/backpack.obj");
+    Model::Ptr cerb_model = Model::New("./assets/cerb/Cerberus_LP.FBX", true);
+    cerb_model->scale(glm::vec3(0.1));
+    cerb_model->rotate(-90.f, glm::vec3(1.0, 0.0, 0.0));
+
+    TextureConfig FBX_TConf;
+    FBX_TConf.flip = false;
+    FBX_TConf.srgb = true;
+    Texture::Ptr cerb_albedo = Texture::New("./assets/cerb/Textures/Cerberus_A.tga", TextureType::Albedo, FBX_TConf);
+    FBX_TConf.srgb = false;
+    Texture::Ptr cerb_normal = Texture::New("./assets/cerb/Textures/Cerberus_N.tga", TextureType::Normal, FBX_TConf);
+    Texture::Ptr cerb_metal = Texture::New("./assets/cerb/Textures/Cerberus_M.tga", TextureType::Metallic, FBX_TConf);
+    Texture::Ptr cerb_roughness = Texture::New("./assets/cerb/Textures/Cerberus_R.tga", TextureType::Roughness, FBX_TConf);
+    Texture::Ptr cerb_ao = Texture::New("./assets/cerb/Textures/Raw/Cerberus_AO.tga", TextureType::Ao, FBX_TConf);
+
+    cerb_model->addModelTexture(cerb_albedo);
+    cerb_model->addModelTexture(cerb_normal);
+    cerb_model->addModelTexture(cerb_metal);
+    cerb_model->addModelTexture(cerb_roughness);
+    cerb_model->addModelTexture(cerb_ao);
 
 
     MeshGroup::Ptr test_shadow = MeshGroup::New();
@@ -1292,15 +1311,23 @@ int init() {
         glm::vec3( 10.0f,  10.0f, 10.0f),
         glm::vec3(-10.0f, -10.0f, 10.0f),
         glm::vec3( 10.0f, -10.0f, 10.0f),
+        glm::vec3(-10.0f,  10.0f, -10.0f),
+        glm::vec3( 10.0f,  10.0f, -10.0f),
+        glm::vec3(-10.0f, -10.0f, -10.0f),
+        glm::vec3( 10.0f, -10.0f, -10.0f),
     };
     glm::vec3 lightColor[] = {
+        glm::vec3(1.f, 1.f, 1.f),
+        glm::vec3(1.f, 1.f, 1.f),
+        glm::vec3(1.f, 1.f, 1.f),
+        glm::vec3(1.f, 1.f, 1.f),
         glm::vec3(1.f, 1.f, 1.f),
         glm::vec3(1.f, 1.f, 1.f),
         glm::vec3(1.f, 1.f, 1.f),
         glm::vec3(1.f, 1.f, 1.f)
     };
 
-    for (unsigned int i = 0; i < 4; i++)
+    for (unsigned int i = 0; i < 8; i++)
     {
         addPointLight(lightPos[i], lightColor[i]);
     }
@@ -1309,7 +1336,8 @@ int init() {
     //scene->addGroup(model1);
     //scene->addGroup(test_shadow);
     //scene->addGroup(model2);
-    scene->addGroup(test_pbr);
+    //scene->addGroup(test_pbr);
+    scene->addGroup(cerb_model);
 
     g_Scenes.push_back(scene);
 
@@ -1339,7 +1367,7 @@ int init() {
     for (int j = 0; j < 6; j++)
         std::cout << "FACE::" << j << "::" << faces[j] << std::endl;
 
-    const Texture::Ptr hdrTexture = Texture::New("./assets/newport_loft.hdr");
+    const Texture::Ptr hdrTexture = Texture::New("./assets/parking_lot.hdr");
 
     screenQuad = Quad::New();
 
