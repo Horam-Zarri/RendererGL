@@ -244,7 +244,7 @@ void main()
     {
         vec4 albedoSample = texture(materialMaps.albedoMap, fs_in.TexCoords);
         // TODO: Make this bias better
-        if (albedoSample.a < 0.1)
+        if (albedoSample.a < 0.05)
             discard;
         _Albedo = albedoSample.rgb;
     }
@@ -255,11 +255,11 @@ void main()
 
     _Normal = hasNormal ? getNormalFromMap()
         : fs_in.Normal;
-    _Metallic = hasMetallic ? texture(materialMaps.metallicMap, fs_in.TexCoords).b
+    _Metallic = hasMetallic ? texture(materialMaps.metallicMap, fs_in.TexCoords).r
         : material.metallic;
     // If does not include a dedicated roughness map most likely its embedded
     // in metallic map's green channel
-    _Roughness = hasRoughness ? texture(materialMaps.roughnessMap, fs_in.TexCoords).r
+    _Roughness = hasRoughness ? texture(materialMaps.roughnessMap, fs_in.TexCoords).g
         : hasMetallic ? texture(materialMaps.metallicMap, fs_in.TexCoords).g : material.roughness;
     _Ao = hasAo ? texture(materialMaps.aoMap, fs_in.TexCoords).r
         : material.ao;
@@ -309,5 +309,6 @@ void main()
     // gamma correct
     // color = pow(color, vec3(1.0/2.2));
 
+    //FragColor = vec4(_Roughness, 0.0, 0.0, 1.0);
     FragColor = vec4(color, 1.0);
 }

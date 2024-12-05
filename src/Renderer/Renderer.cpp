@@ -322,6 +322,8 @@ void renderScenes(const Shader::Ptr& shader) {
                     shader->setBool("hasMetallic", hasMetallic);
                     shader->setBool("hasRoughness", hasRoughness);
                     shader->setBool("hasAo", hasAo);
+                    shader->setBool("hasNormal", hasNormal);
+
                     texShadowmap->setSlot(TEXTURE_SLOT_SHADOW_PBR);
 
                     bool hasIBLMaps =
@@ -1123,10 +1125,12 @@ int init() {
 
     Scene::Ptr scene = Scene::New();
 
-    //Model::Ptr model1 = Model::New("./assets/Sponza/glTF/Sponza.gltf", true);
+    Model::Ptr sponza_model = Model::New("./assets/Sponza/glTF/Sponza.gltf", true);
     //Model::Ptr model1 = Model::New("./assets/SponzaR/sponza.glb", true);
-    //model1->scale(glm::vec3(0.01));
+    sponza_model->scale(glm::vec3(0.01));
     //Model::Ptr model2 = Model::New("./assets/backpack.obj");
+
+    std::cout << "NIER 2B LOAD NOW" << std::endl;
     Model::Ptr cerb_model = Model::New("./assets/cerb/Cerberus_LP.FBX", true);
     cerb_model->scale(glm::vec3(0.1));
     cerb_model->rotate(-90.f, glm::vec3(1.0, 0.0, 0.0));
@@ -1307,14 +1311,14 @@ int init() {
     // pbr test lights
     // ------
     glm::vec3 lightPos[] = {
-        glm::vec3(-10.0f,  10.0f, 10.0f),
-        glm::vec3( 10.0f,  10.0f, 10.0f),
-        glm::vec3(-10.0f, -10.0f, 10.0f),
-        glm::vec3( 10.0f, -10.0f, 10.0f),
-        glm::vec3(-10.0f,  10.0f, -10.0f),
-        glm::vec3( 10.0f,  10.0f, -10.0f),
-        glm::vec3(-10.0f, -10.0f, -10.0f),
-        glm::vec3( 10.0f, -10.0f, -10.0f),
+        glm::vec3(-1.0f,  1.0f, 1.0f),
+        glm::vec3( 1.0f,  1.0f, 1.0f),
+        glm::vec3(-1.0f, -1.0f, 1.0f),
+        glm::vec3( 1.0f, -1.0f, 1.0f),
+        glm::vec3(-1.0f,  1.0f, -1.0f),
+        glm::vec3( 1.0f,  1.0f, -1.0f),
+        glm::vec3(-1.0f, -1.0f, -1.0f),
+        glm::vec3( 1.0f, -1.0f, -1.0f),
     };
     glm::vec3 lightColor[] = {
         glm::vec3(1.f, 1.f, 1.f),
@@ -1333,11 +1337,11 @@ int init() {
     }
     //scene->addGroup(test_bloom);
     //scene->addGroup(test_normal);
-    //scene->addGroup(model1);
+    scene->addGroup(sponza_model);
     //scene->addGroup(test_shadow);
     //scene->addGroup(model2);
     //scene->addGroup(test_pbr);
-    scene->addGroup(cerb_model);
+    //scene->addGroup(cerb_model);
 
     g_Scenes.push_back(scene);
 
@@ -1367,7 +1371,7 @@ int init() {
     for (int j = 0; j < 6; j++)
         std::cout << "FACE::" << j << "::" << faces[j] << std::endl;
 
-    const Texture::Ptr hdrTexture = Texture::New("./assets/parking_lot.hdr");
+    const Texture::Ptr hdrTexture = Texture::New("./assets/newport_loft.hdr");
 
     screenQuad = Quad::New();
 

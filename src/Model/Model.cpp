@@ -21,7 +21,20 @@ void Model::loadModel(std::string path) {
         aiProcess_Triangulate |
         aiProcess_FlipUVs |
         aiProcess_GenNormals |
-        aiProcess_CalcTangentSpace
+        aiProcess_CalcTangentSpace |
+
+aiProcess_Triangulate |
+		                          aiProcess_JoinIdenticalVertices |
+		                          aiProcess_GenUVCoords |
+		                          aiProcess_SortByPType |
+		                          aiProcess_RemoveRedundantMaterials |
+		                          aiProcess_FindInvalidData |
+		                          aiProcess_FlipUVs |
+		                          aiProcess_CalcTangentSpace |
+		                          aiProcess_GenSmoothNormals |
+		                          aiProcess_ImproveCacheLocality |
+		                          aiProcess_OptimizeMeshes |
+		                          aiProcess_SplitLargeMeshes
     );
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
@@ -89,19 +102,25 @@ Mesh::Ptr Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         else
             vertex.TexCoords = glm::vec2(0.0f, 0.0f);
 
-        vector.x = mesh->mTangents[i].x;
-        vector.y = mesh->mTangents[i].y;
-        vector.z = mesh->mTangents[i].z;
+        if (mesh->HasTangentsAndBitangents()) {
+            vector.x = mesh->mTangents[i].x;
+            vector.y = mesh->mTangents[i].y;
+            vector.z = mesh->mTangents[i].z;
 
-        vertex.Tangent = vector;
+            vertex.Tangent = vector;
 
-        vector.x = mesh->mBitangents[i].x;
-        vector.y = mesh->mBitangents[i].y;
-        vector.z = mesh->mBitangents[i].z;
+            vector.x = mesh->mBitangents[i].x;
+            vector.y = mesh->mBitangents[i].y;
+            vector.z = mesh->mBitangents[i].z;
 
-        vertex.Bitangent = vector;
+            vertex.Bitangent = vector;
+        } else {
+            vertex.Tangent = glm::vec3(0.0f);
+            vertex.Bitangent = glm::vec3(0.0f);
+        }
 
         vertices.push_back(vertex);
+
     }
 
     std::cout << "ASSIMP::FACE_COUNT::" << mesh->mNumFaces << std::endl;
@@ -178,6 +197,7 @@ std::vector<Texture::Ptr> Model::loadMaterialTextures(aiMaterial* mtl, aiTexture
             if (std::strcmp(fname.data(), str.C_Str()) == 0)
             {
                 std::cout << "ASSIMP::TEXTURE_ALREADY_EXISTS" << std::endl;
+                textures.push_back(m_TexturesLoaded[j]);
                 skip = true;
                 break;
             }
@@ -207,6 +227,7 @@ std::vector<Texture::Ptr> Model::loadMaterialTextures(aiMaterial* mtl, aiTexture
                 case aiTextureType_HEIGHT:
                 case aiTextureType_NORMALS:
                     tx_type = TextureType::Normal;
+                    std::cout << "MODEN::NORMAL_TEXTURE" << std::endl;
                     tx_conf.srgb = false;
                     break;
                 case aiTextureType_BASE_COLOR:
