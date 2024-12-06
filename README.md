@@ -2,7 +2,7 @@
 A simple renderer written with OpenGL featuring realtime graphics techniques 
 
 ![Sponza scene with 2B from Nier: Automata](/screenshots/Sponza_2B_Feather.png)
-Sponza scene with 2B from NieR: Automata  
+Sponza scene with [2B model](https://sketchfab.com/3d-models/2b-nier-automata-8b00fabb9d364c2da3c0c49ed79217ef) from NieR: Automata  
 
 ## Features 
 * Phong / Blinn-Phong lighting
@@ -14,8 +14,7 @@ Sponza scene with 2B from NieR: Automata
 * Normal mapping
 * Shadow mapping
 * Deferred shading
-* PBR
-* IBL
+* PBR & IBL
 
 ## Screenshots 
 ![Desert Gun Scene with debug UI](/screenshots/Desert_UI.png)
@@ -23,7 +22,7 @@ Sponza scene with 2B from NieR: Automata
 ## Building 
 ### Prerequisites
 * OpenGL >= 3.3
-* At least 4GB VRAM recommended for smooth use
+* At least 4GB VRAM recommended for smooth usage
 * C++20, CMake >= 3.10
 
  
