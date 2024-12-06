@@ -555,7 +555,8 @@ void backBufferPass() {
     glColorMaski(1, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
     // Draw lights cube debug
-    renderLightCubes(shaderLightCube);
+    if (g_Engine.UI_ENBL)
+        renderLightCubes(shaderLightCube);
 
     if (g_Engine.MSAA_ENBL)
         fboOffscrMSAA->blitColorTo(fboOffscr, g_Engine.RENDER_WIDTH, g_Engine.RENDER_HEIGHT);
