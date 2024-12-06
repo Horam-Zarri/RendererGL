@@ -30,6 +30,16 @@ void callback::process_input(GLFWwindow *window, float delta_frame)
         CAMERA_STATE.ProcessMovement(CameraMovement::LEFT, delta_frame);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         CAMERA_STATE.ProcessMovement(CameraMovement::RIGHT, delta_frame);
+
+    // Check only once every 20 frame avg (if we dont do this a keypress longer
+    // than 1 frame will register more than 1 time cancelling out the action)
+    static float dt = 0.0f;
+    if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && dt > delta_frame * 20.f) {
+        renderer::ENGINE_STATE.UI_ENBL = !renderer::ENGINE_STATE.UI_ENBL;
+        dt = 0.f;
+    } else {
+        dt += delta_frame;
+    }
 }
 
 void callback::mouse_callback(GLFWwindow* window, double xposIn, double yposIn)

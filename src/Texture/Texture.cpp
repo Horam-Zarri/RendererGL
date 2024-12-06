@@ -101,13 +101,18 @@ void Texture::genFromFile() {
 
     if (dataC || dataF)
     {
+        std::cout << "Found " << nrComponents << " components for " << m_Path << std::endl;
+
         GLenum internal_format = m_Config.internal_format;
         GLenum data_format = m_Config.data_format;
 
         // sentinel value for unspecified
-        if (data_format == -1) {
-            internal_format = getInternalFormat(nrComponents, m_Config.srgb);
-            data_format = getDataFormat(nrComponents);
+        if (data_format == TextureConfig::UNSPECIFIED) {
+            unsigned int chan = m_Config.nrChannels;
+            if (chan == TextureConfig::UNSPECIFIED)
+                chan = nrComponents;
+            internal_format = getInternalFormat(chan, m_Config.srgb);
+            data_format = getDataFormat(chan);
         }
 
         if (m_Config.hdr) {

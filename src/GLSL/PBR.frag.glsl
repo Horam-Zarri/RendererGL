@@ -32,6 +32,9 @@ uniform bool hasRoughness;
 uniform bool hasAo;
 uniform bool hasNormal;
 
+uniform vec3 metallicChannel = vec3(1.0, 0.0, 0.0);
+uniform vec3 roughnessChannel = vec3(0.0, 1.0, 0.0);
+
 // IBL
 uniform samplerCube irradianceMap;
 uniform samplerCube prefilterMap;
@@ -175,7 +178,7 @@ vec3 CalcPointLightRadiance(
     vec3 L = normalize(light.position - fs_in.WorldPos);
     vec3 H = normalize(L + V);
 
-    float distance = length(L);
+    float distance = length(light.position - fs_in.WorldPos);
     float attenuation = 1.0 / (distance * distance);
     vec3 radiance = light.color * attenuation;
 
@@ -240,27 +243,46 @@ void main()
     vec3 _Albedo, _Normal;
     float _Metallic, _Roughness, _Ao;
 
-    if (hasAlbedo)
-    {
+    if (hasAlbedo) {
         vec4 albedoSample = texture(materialMaps.albedoMap, fs_in.TexCoords);
         // TODO: Make this bias better
         if (albedoSample.a < 0.05)
             discard;
         _Albedo = albedoSample.rgb;
     }
-    else
-    {
+    else {
         _Albedo = material.albedo;
     }
 
     _Normal = hasNormal ? getNormalFromMap()
         : fs_in.Normal;
-    _Metallic = hasMetallic ? texture(materialMaps.metallicMap, fs_in.TexCoords).r
-        : material.metallic;
-    // If does not include a dedicated roughness map most likely its embedded
-    // in metallic map's green channel
-    _Roughness = hasRoughness ? texture(materialMaps.roughnessMap, fs_in.TexCoords).g
-        : hasMetallic ? texture(materialMaps.metallicMap, fs_in.TexCoords).g : material.roughness;
+
+    if (hasMetallic) {
+        vec3 metal_sample = texture(materialMaps.metallicMap, fs_in.TexCoords).rgb;
+
+        if (metallicChannel.r != 0) _Metallic = metal_sample.r;
+        if (metallicChannel.g != 0) _Metallic = metal_sample.g;
+        if (metallicChannel.b != 0) _Metallic = metal_sample.b;
+    }
+    else {
+        _Metallic = material.metallic;
+    }
+
+    if (hasRoughness) {
+        vec3 rough_sample = texture(materialMaps.roughnessMap, fs_in.TexCoords).rgb;
+
+        if (roughnessChannel.r != 0) _Roughness = rough_sample.r;
+        if (roughnessChannel.g != 0) _Roughness = rough_sample.g;
+        if (roughnessChannel.b != 0) _Roughness = rough_sample.b;
+    }
+    else if (hasMetallic) {
+        // If does not include a dedicated roughness map most likely its embedded
+        // in metallic map's green channel
+        _Roughness = texture(materialMaps.metallicMap, fs_in.TexCoords).g;
+    } else {
+        _Roughness = material.roughness;
+    }
+
     _Ao = hasAo ? texture(materialMaps.aoMap, fs_in.TexCoords).r
         : material.ao;
 
@@ -309,6 +331,5 @@ void main()
     // gamma correct
     // color = pow(color, vec3(1.0/2.2));
 
-    //FragColor = vec4(_Roughness, 0.0, 0.0, 1.0);
     FragColor = vec4(color, 1.0);
 }

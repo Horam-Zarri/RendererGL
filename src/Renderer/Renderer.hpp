@@ -24,6 +24,8 @@ namespace renderer
 {
 struct EngineState {
 
+    int UI_ENBL;
+
     glm::vec3 LIGHT_DIR;
     glm::vec3 LIGHT_AMBIENT;
     glm::vec3 LIGHT_DIFFUSE;
@@ -65,6 +67,8 @@ struct EngineState {
     int PBR_ENBL;
 
     EngineState() {
+        UI_ENBL = true;
+
         LIGHT_DIR = glm::vec3(-4.0f, -2.0f, -3.0f);
         LIGHT_AMBIENT = glm::vec3(0.1f);
         LIGHT_DIFFUSE = glm::vec3(0.5f);

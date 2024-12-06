@@ -11,7 +11,10 @@
 
 
 struct TextureConfig {
+    static constexpr int UNSPECIFIED = -1;
+
     GLint level;
+    GLint nrChannels;
     GLint internal_format;
     GLint data_format;
 
@@ -32,11 +35,15 @@ struct TextureConfig {
 
     bool flip;
 
+    enum class ColorChannel {
+        NONE = 0, RED, GREEN, BLUE, ALPHA
+    } associated_channel;
+
     TextureConfig() {
         level = 0;
-
+        nrChannels = UNSPECIFIED;
         // sentinel to state manual format detection
-        data_format = internal_format = -1;
+        data_format = internal_format = UNSPECIFIED;
 
         mag_filter = GL_LINEAR;
         min_filter = GL_LINEAR_MIPMAP_LINEAR;
@@ -53,6 +60,8 @@ struct TextureConfig {
         hdr = false;
 
         flip = true;
+
+        associated_channel = ColorChannel::NONE;
     }
 };
 

@@ -27,8 +27,15 @@ class Model : public MeshGroup {
     MAKE_MOVE_ONLY(Model)
     GENERATE_PTR(Model)
 
+    using ColorChannel = TextureConfig::ColorChannel;
 public:
-    Model(const std::string& path, bool pbr = false);
+
+
+    Model(
+        const std::string& path, bool pbr = false,
+        ColorChannel metallic = ColorChannel::RED,
+        ColorChannel roughness = ColorChannel::GREEN
+    );
 
     void addModelTexture(const Texture::Ptr& texture)
     {
@@ -39,10 +46,14 @@ public:
         }
         m_Meshes[0]->addTexture(texture);
     }
+
 private:
     std::vector<Texture::Ptr> m_TexturesLoaded;
     std::string m_Directory;
     bool m_Pbr;
+    ColorChannel m_MetallicChannel;
+    ColorChannel m_RoughnessChannel;
+
 
     void loadModel(std::string path);
 

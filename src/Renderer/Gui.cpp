@@ -14,6 +14,9 @@
 
 void settings_panel() {
 
+    using renderer::ENGINE_STATE;
+    using renderer::camera::CAMERA_STATE;
+
 
     ImGuiViewport* window_full = ImGui::GetMainViewport();
 
@@ -32,10 +35,6 @@ void settings_panel() {
         ImGui::End();
         return;
     }
-
-
-    using renderer::ENGINE_STATE;
-    using renderer::camera::CAMERA_STATE;
 
 
     if (ImGui::TreeNode("Model")) {
@@ -309,13 +308,13 @@ void settings_panel() {
         };
 
         // not elegant, yet so robust
-        int can_enable_aa = !(ENGINE_STATE.HDR_ENBL || ENGINE_STATE.BLOOM_ENBL || ENGINE_STATE.DEFERRED_SHADING);
+        int can_enable_aa = !(ENGINE_STATE.BLOOM_ENBL || ENGINE_STATE.DEFERRED_SHADING);
         int aa_state = ENGINE_STATE.MSAA_ENBL ? std::log2(ENGINE_STATE.MSAA_MULTIPLIER): 0;
 
         if (!can_enable_aa) {
             aa_state = ENGINE_STATE.MSAA_ENBL = false;
             ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 0, 255));
-            ImGui::Text("MSAA cant be enabled with hdr | bloom | deferred");
+            ImGui::Text("MSAA cant be enabled with bloom | deferred");
             ImGui::PopStyleColor();
             ImGui::BeginDisabled();
         }
@@ -390,5 +389,6 @@ void GUI::setup(GLFWwindow* window) {
 }
 
 void GUI::render() {
+    if (!renderer::g_Engine.UI_ENBL) return;
     settings_panel();
 }

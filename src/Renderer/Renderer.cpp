@@ -270,6 +270,10 @@ void renderScenes(const Shader::Ptr& shader) {
 
                 bool pbr = false;
 
+                using ColorChannel = TextureConfig::ColorChannel;
+
+                ColorChannel metallicChannel, roughnessChannel;
+
                 for (const auto& texture : mesh->getTextures()) {
 
                     unsigned int slot = 0;
@@ -295,11 +299,13 @@ void renderScenes(const Shader::Ptr& shader) {
                         case TextureType::Metallic:
                             slot = TEXTURE_SLOT_METALLIC;
                             hasMetallic = true;
+                            metallicChannel = texture->getTextureConfig().associated_channel;
                             pbr = true;
                             break;
                         case TextureType::Roughness:
                             slot = TEXTURE_SLOT_ROUGHNESS;
                             hasRoughness = true;
+                            roughnessChannel = texture->getTextureConfig().associated_channel;
                             pbr = true;
                             break;
                         case TextureType::Ao:
@@ -323,6 +329,25 @@ void renderScenes(const Shader::Ptr& shader) {
                     shader->setBool("hasRoughness", hasRoughness);
                     shader->setBool("hasAo", hasAo);
                     shader->setBool("hasNormal", hasNormal);
+
+                    glm::vec3 metal(0.0f), rough(0.0f);
+
+                    switch (metallicChannel) {
+                        case ColorChannel::RED: metal.r = 1.0; break;
+                        case ColorChannel::GREEN: metal.g = 1.0; break;
+                        case ColorChannel::BLUE: metal.b = 1.0; break;
+                        default: break;
+                    }
+
+                    switch (roughnessChannel) {
+                        case ColorChannel::RED: rough.r = 1.0; break;
+                        case ColorChannel::GREEN: rough.g = 1.0; break;
+                        case ColorChannel::BLUE: rough.b = 1.0; break;
+                        default: break;
+                    }
+
+                    shader->setVec3("metallicChannel", metal);
+                    shader->setVec3("roughnessChannel", rough);
 
                     texShadowmap->setSlot(TEXTURE_SLOT_SHADOW_PBR);
 
@@ -1131,6 +1156,12 @@ int init() {
     //Model::Ptr model2 = Model::New("./assets/backpack.obj");
 
     std::cout << "NIER 2B LOAD NOW" << std::endl;
+    Model::Ptr nier_2b_model = Model::New("./assets/2be/scene.gltf", true, TextureConfig::ColorChannel::BLUE, TextureConfig::ColorChannel::GREEN);
+    nier_2b_model->scale(glm::vec3(0.1f));
+    nier_2b_model->rotate(90.f, glm::vec3(0.0, 1.0, 0.0));
+    nier_2b_model->translate(glm::vec3(-12.0, 19.5, 64.0));
+    nier_2b_model->rotate(25.f, glm::vec3(0.0, 1.0, 0.0));
+
     Model::Ptr cerb_model = Model::New("./assets/cerb/Cerberus_LP.FBX", true);
     cerb_model->scale(glm::vec3(0.1));
     cerb_model->rotate(-90.f, glm::vec3(1.0, 0.0, 0.0));
@@ -1311,14 +1342,14 @@ int init() {
     // pbr test lights
     // ------
     glm::vec3 lightPos[] = {
-        glm::vec3(-1.0f,  1.0f, 1.0f),
-        glm::vec3( 1.0f,  1.0f, 1.0f),
-        glm::vec3(-1.0f, -1.0f, 1.0f),
-        glm::vec3( 1.0f, -1.0f, 1.0f),
-        glm::vec3(-1.0f,  1.0f, -1.0f),
-        glm::vec3( 1.0f,  1.0f, -1.0f),
-        glm::vec3(-1.0f, -1.0f, -1.0f),
-        glm::vec3( 1.0f, -1.0f, -1.0f),
+        glm::vec3(-10.0f,  10.0f, 10.0f),
+        glm::vec3( 10.0f,  10.0f, 10.0f),
+        glm::vec3(-10.0f, -10.0f, 10.0f),
+        glm::vec3( 10.0f, -10.0f, 10.0f),
+        glm::vec3(-10.0f,  10.0f, -10.0f),
+        glm::vec3( 10.0f,  10.0f, -10.0f),
+        glm::vec3(-10.0f, -10.0f, -10.0f),
+        glm::vec3( 10.0f, -10.0f, -10.0f),
     };
     glm::vec3 lightColor[] = {
         glm::vec3(1.f, 1.f, 1.f),
@@ -1331,7 +1362,7 @@ int init() {
         glm::vec3(1.f, 1.f, 1.f)
     };
 
-    for (unsigned int i = 0; i < 8; i++)
+    for (unsigned int i = 0; i < 0; i++)
     {
         addPointLight(lightPos[i], lightColor[i]);
     }
@@ -1342,6 +1373,7 @@ int init() {
     //scene->addGroup(model2);
     //scene->addGroup(test_pbr);
     //scene->addGroup(cerb_model);
+    scene->addGroup(nier_2b_model);
 
     g_Scenes.push_back(scene);
 
@@ -1398,6 +1430,9 @@ void updateState() {
     camera::g_Camera.updateCamera(camera::CAMERA_STATE);
 
     g_Engine.CLEAR_COLOR = ENGINE_STATE.CLEAR_COLOR;
+
+    if (g_Engine.UI_ENBL != ENGINE_STATE.UI_ENBL)
+        g_Engine.UI_ENBL = ENGINE_STATE.UI_ENBL;
 
     // model
     if (g_Engine.OBJECT_POS != ENGINE_STATE.OBJECT_POS)

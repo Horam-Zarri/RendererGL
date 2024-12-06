@@ -8,9 +8,12 @@
 
 #include <stb_image.h>
 
+#include <filesystem>
 
-Model::Model(const std::string& path, bool pbr) {
+Model::Model(const std::string& path, bool pbr, ColorChannel metallic, ColorChannel roughness) {
     m_Pbr = pbr;
+    m_MetallicChannel = metallic;
+    m_RoughnessChannel = roughness;
     loadModel(path);
 }
 
@@ -22,19 +25,18 @@ void Model::loadModel(std::string path) {
         aiProcess_FlipUVs |
         aiProcess_GenNormals |
         aiProcess_CalcTangentSpace |
-
-aiProcess_Triangulate |
-		                          aiProcess_JoinIdenticalVertices |
-		                          aiProcess_GenUVCoords |
-		                          aiProcess_SortByPType |
-		                          aiProcess_RemoveRedundantMaterials |
-		                          aiProcess_FindInvalidData |
-		                          aiProcess_FlipUVs |
-		                          aiProcess_CalcTangentSpace |
-		                          aiProcess_GenSmoothNormals |
-		                          aiProcess_ImproveCacheLocality |
-		                          aiProcess_OptimizeMeshes |
-		                          aiProcess_SplitLargeMeshes
+        aiProcess_Triangulate |
+        aiProcess_JoinIdenticalVertices |
+        aiProcess_GenUVCoords |
+        aiProcess_SortByPType |
+        aiProcess_RemoveRedundantMaterials |
+        aiProcess_FindInvalidData |
+        aiProcess_FlipUVs |
+        aiProcess_CalcTangentSpace |
+        aiProcess_GenSmoothNormals |
+        aiProcess_ImproveCacheLocality |
+        aiProcess_OptimizeMeshes |
+        aiProcess_SplitLargeMeshes
     );
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
@@ -154,10 +156,8 @@ Mesh::Ptr Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         else {
             std::vector<Texture::Ptr> diffuseMaps = loadTex(aiTextureType_DIFFUSE);
             textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-
             std::vector<Texture::Ptr> specularMaps = loadTex(aiTextureType_SPECULAR);
             textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-
             std::vector<Texture::Ptr> normalMaps = loadTex(aiTextureType_HEIGHT);
             textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
         }
@@ -214,6 +214,8 @@ std::vector<Texture::Ptr> Model::loadMaterialTextures(aiMaterial* mtl, aiTexture
             TextureConfig tx_conf;
             tx_conf.flip = false;
 
+            std::filesystem::path _fp = fpath;
+
             switch (type)
             {
                 case aiTextureType_DIFFUSE:
@@ -238,12 +240,14 @@ std::vector<Texture::Ptr> Model::loadMaterialTextures(aiMaterial* mtl, aiTexture
                 case aiTextureType_METALNESS:
                     tx_type = TextureType::Metallic;
                     tx_conf.srgb = false;
+                    tx_conf.associated_channel = m_MetallicChannel;
                     std::cout << "MODE::METALLIC_TEXTURE" << std::endl;
                     break;
                 case aiTextureType_DIFFUSE_ROUGHNESS:
-                    std::cout << "MODE::ROUGHNESS_TEXTURE" << std::endl;
                     tx_type = TextureType::Roughness;
                     tx_conf.srgb = false;
+                    tx_conf.associated_channel = m_RoughnessChannel;
+                    std::cout << "MODE::ROUGHNESS_TEXTURE" << std::endl;
                     break;
                 case aiTextureType_AMBIENT_OCCLUSION:
                     std::cout << "MODE::AO_TEXTURE" << std::endl;
@@ -253,7 +257,6 @@ std::vector<Texture::Ptr> Model::loadMaterialTextures(aiMaterial* mtl, aiTexture
                 default:
                     tx_type = TextureType::None;
             }
-
 
             Texture::Ptr tx = Texture::New(fpath, tx_type, tx_conf);
 

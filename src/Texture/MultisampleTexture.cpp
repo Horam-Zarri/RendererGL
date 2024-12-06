@@ -16,6 +16,9 @@ void MultisampleTexture::genTexture() {
 
     bind();
 
+    // lets just do this for now
+    m_Config.hdr = true;
+
     glTexImage2DMultisample(
         GL_TEXTURE_2D_MULTISAMPLE,
         m_Config.msaa_multiplier,
